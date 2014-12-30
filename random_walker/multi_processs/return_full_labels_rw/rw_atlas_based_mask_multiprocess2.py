@@ -32,8 +32,9 @@ def process_single_marker(subject_index):
         for atlas_index in range(mask.shape[3]):
             z_atlas_mask = np.copy(mask[..., atlas_index] == (i + 1))
             if z_atlas_mask.sum() <= TOP_RANK:
-                marker_roi.append(np.zeros((TOP_RANK, 3)))
-                continue
+                # marker_roi.append(np.zeros((TOP_RANK, 3)))
+                prob_label_data = nib.load(PROB_ROI_202_SUB_FILE + ROI[i] + '_prob.nii.gz').get_data()
+                marker_roi.append(np.array(np.nonzero(prob_label_data), dtype=np.int32).T)
             temp_image = image[z_atlas_mask, subject_index]
             threshold = -np.sort(-temp_image)[TOP_RANK]
             z_atlas_mask[image[..., subject_index]<= threshold] = False

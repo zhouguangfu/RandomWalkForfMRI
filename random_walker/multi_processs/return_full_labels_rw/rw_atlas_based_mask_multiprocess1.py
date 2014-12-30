@@ -10,7 +10,7 @@ from scipy.ndimage import morphology
 from skimage.segmentation import random_walker
 from configs import *
 
-TOP_RANK = 50 # 0 - 100
+TOP_RANK = 30 # 0 - 100
 ATLAS_NUM = 202
 
 #global varibale
@@ -20,7 +20,6 @@ image = nib.load(ACTIVATION_DATA_DIR)
 affine = image.get_affine()
 image = image.get_data()
 all_prob_mask = nib.load(ALL_PROB_MASK).get_data()
-
 
 def process_single_marker(subject_index):
     global mask, image, affine
@@ -32,8 +31,9 @@ def process_single_marker(subject_index):
         for atlas_index in range(mask.shape[3]):
             z_atlas_mask = np.copy(mask[..., atlas_index] == (i + 1))
             if z_atlas_mask.sum() <= TOP_RANK:
-                marker_roi.append(np.zeros((TOP_RANK, 3)))
-                continue
+                # marker_roi.append(np.zeros((TOP_RANK, 3)))
+                prob_label_data = nib.load(PROB_ROI_202_SUB_FILE + ROI[i] + '_prob.nii.gz').get_data()
+                marker_roi.append(np.array(np.nonzero(prob_label_data), dtype=np.int32).T)
             temp_image = image[z_atlas_mask, subject_index]
             threshold = -np.sort(-temp_image)[TOP_RANK]
             z_atlas_mask[image[..., subject_index]<= threshold] = False
