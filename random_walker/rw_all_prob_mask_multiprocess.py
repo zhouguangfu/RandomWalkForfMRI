@@ -2,13 +2,14 @@ __author__ = 'zhouguangfu'
 
 import datetime
 import multiprocessing
-
 import numpy as np
 import nibabel as nib
+
 from docx import Document
 from docx.shared import Inches
 from scipy.ndimage import morphology
 from skimage.segmentation import random_walker
+from configs import *
 
 from algorithm.regiongrowing import *
 from matplot_case.histogram_features_two import show_date_index_formatter

@@ -4,6 +4,7 @@ __author__ = 'zhouguangfu'
 import datetime
 import numpy as np
 import nibabel as nib
+from configs import *
 
 SUBJECT_NUM = 70
 ATLAS_NUM = 202

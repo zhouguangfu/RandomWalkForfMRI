@@ -8,6 +8,7 @@ import nibabel as nib
 from docx import Document
 from scipy.ndimage import morphology
 from skimage.segmentation import random_walker
+from configs import *
 
 TOP_RANK = 30 # 0 - 100
 ATLAS_NUM = 202
