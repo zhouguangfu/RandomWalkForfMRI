@@ -1,5 +1,4 @@
 __author__ = 'zgf'
-__author__ = 'zhouguangfu'
 
 import datetime
 import numpy as np
