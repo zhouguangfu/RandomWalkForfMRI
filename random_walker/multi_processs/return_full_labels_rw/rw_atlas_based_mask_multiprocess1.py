@@ -10,7 +10,6 @@ from skimage.segmentation import random_walker
 from configs import *
 
 TOP_RANK = 10 # 0 - 100
-SUBJECT_NUM = 70
 
 #global varibale
 image = nib.load(ACTIVATION_DATA_DIR)
@@ -25,7 +24,7 @@ def process_single_subject(subject_index):
     global image, complete_atlas_data, left_barin_mask, right_barin_mask, TOP_RANK
 
     indexs =  np.load(ATLAS_TOP_DIR + str(subject_index) + '_top_sort.npy')
-    region_result_RW = np.zeros_like(complete_atlas_data)
+    region_result_RW = np.zeros((complete_atlas_data.shape[0], complete_atlas_data.shape[1], complete_atlas_data.shape[2], TOP_RANK))
 
     for atlas_index in range(TOP_RANK):
         atlas_data = complete_atlas_data[..., indexs[atlas_index]]
@@ -70,19 +69,10 @@ def process_single_subject(subject_index):
 if __name__ == "__main__":
     starttime = datetime.datetime.now()
 
-    image_list = []
-    for k in range(SUBJECT_NUM):
-    # for k in range(1):
-        image_list.append(k)
-
-    pool = multiprocessing.Pool(processes=15)
-    pool_outputs = pool.map(process_single_subject, image_list)
-    pool.close()
-    pool.join()
-
-    for j in range(0, SUBJECT_NUM):
+    for j in range(0, 10):
     # for j in range(1):
-        nib.save(nib.Nifti1Image((pool_outputs[j]).astype(np.int32), affine), RW_RESULT_DATA_DIR + str(j)+ '_'+ RW_ATLAS_BASED_RESULT_FILE)
+        region_result_RW = process_single_subject(j)
+        nib.save(nib.Nifti1Image((region_result_RW).astype(np.int32), affine), RW_RESULT_DATA_DIR + str(j)+ '_'+ RW_ATLAS_BASED_RESULT_FILE)
         print 'Result:  ', j
 
     endtime = datetime.datetime.now()
