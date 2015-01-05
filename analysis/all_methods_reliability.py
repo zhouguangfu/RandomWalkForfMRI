@@ -4,9 +4,10 @@ import datetime
 
 import numpy as np
 import nibabel as nib
+
 from docx import Document
 from docx.shared import Inches
-
+from configs import *
 from analysis.inter_subject_bar import show_barchart
 
 
@@ -94,8 +95,11 @@ def ac_srg(roi_index):
 def random_walker(roi_index):
     # all_subject_session_path = ANALYSIS_DIR + 'rsrg/' + ROI[roi_index] + '_' + '1000_rsrg.nii.gz'
     # all_subject_session_path = ANALYSIS_DIR + 'rw/' + str(roi_index + 1) + '_rw_result_file.nii.gz'
-    all_subject_session_path = ANALYSIS_DIR + 'rw/' + ROI[roi_index] + '_' + RW_PROB_RESULT_FILE
-    all_subject_session = nib.load(all_subject_session_path).get_data()
+
+    # all_subject_session_path = ANALYSIS_DIR + 'rw/' + ROI[roi_index] + '_' + RW_PROB_RESULT_FILE
+    # all_subject_session = nib.load(all_subject_session_path).get_data()
+
+    all_subject_session = (nib.load(ANALYSIS_DIR + 'rw/rw_prob_result_file.nii.gz').get_data() == (roi_index + 1)).astype(np.int32)
 
     dices = compute_dice_matrix(all_subject_session)
     return dices

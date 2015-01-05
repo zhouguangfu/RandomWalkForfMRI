@@ -10,8 +10,9 @@ from scipy.ndimage import morphology
 from skimage.segmentation import random_walker
 from configs import *
 
-TOP_RANK = 50 # 0 - 100
+TOP_RANK = 30 # 0 - 100
 ATLAS_NUM = 202
+BACKGROUND_THR = 0
 
 #global varibale
 mask = nib.load(ATLAS_SUBJECTS_LABELS_DIR).get_data()
@@ -61,11 +62,19 @@ def process_single_subject(subject_image_marker):
                              all_atlas_based_markers[i][atlas_index][:, 2], atlas_index] = i + 1
 
         markers = np.zeros_like(image[..., subject_index])
-        volume = morphology.binary_dilation(all_prob_mask).astype(all_prob_mask.dtype)
-        # markers[volume == 0] = -1 #not consider -------------!!!!!!
-        markers[volume == 0] = -1
-        volume[all_prob_mask != 0] = 0
-        markers[volume != 0] = 5 #backgroud
+        # volume = morphology.binary_dilation(all_prob_mask).astype(all_prob_mask.dtype)
+        # # markers[volume == 0] = -1 #not consider -------------!!!!!!
+        # markers[volume == 0] = -1
+        # volume[all_prob_mask != 0] = 0
+        # markers[volume != 0] = 5 #backgroud
+
+        #prob_mask <= 0 --- background
+        markers[all_prob_mask == 0] = -1
+        temp_volume = image[..., subject_index]
+        temp_volume[all_prob_mask == 0] = 10000
+        markers[temp_volume <= BACKGROUND_THR] = 5
+
+
         markers[region_result_RW[..., atlas_index] != 0] = region_result_RW[region_result_RW[..., atlas_index] != 0, atlas_index]
         rw_labels = random_walker(image[..., subject_index], markers, beta=10, mode='bf')
         region_result_RW[rw_labels > 0, atlas_index] = rw_labels[rw_labels > 0]
@@ -101,33 +110,13 @@ if __name__ == "__main__":
     # for k in range(1):
         image_list.append((k, markers_pool_outputs[k]))
 
-    # pool = multiprocessing.Pool(processes=multiprocessing.cpu_count())
-    # pool_outputs = pool.map(process_single_subject, image_list)
-    # pool.close()
-    # pool.join()
-
-    # rw_atlas_based_aggrator_result = np.zeros((mask.shape[0], mask.shape[1], mask.shape[2], mask.shape[3], len(ROI)))
-
     for j in range(0, 10):
     # for j in range(1):
     #     region_result_RW = pool_outputs[j]
-
         region_result_RW = process_single_subject(image_list[j])
         weight = np.ones(ATLAS_NUM, dtype=float)
-        nib.save(nib.Nifti1Image((region_result_RW).astype(np.int32), affine), RW_RESULT_DATA_DIR + str(j)+ '_'+ RW_ATLAS_BASED_RESULT_FILE)
+        nib.save(nib.Nifti1Image((region_result_RW).astype(np.int32), affine), RW_RESULT_DATA_DIR + str(j)+ '_'+ str(BACKGROUND_THR) + '_' + RW_ATLAS_BASED_RESULT_FILE)
         print 'Result:  ', j
-
-    #     ROI_sizes = []
-    #     for roi_index in range(len(ROI)):
-    #         temp = np.zeros_like(region_result_RW)
-    #         temp[region_result_RW == (roi_index + 1)] = 1
-    #         rw_atlas_based_aggrator_result[..., j, roi_index] = (np.average(temp, aix=3, weights=weight))
-    #         nib.save(nib.Nifti1Image(rw_atlas_based_aggrator_result[..., j, roi_index].astype(np.int32), affine),
-    #                  RW_RESULT_DATA_DIR + ROI[roi_index] + '_' + str(j)+ '_'+ RW_ATLAS_BASED_AGGRATOR_RESULT_FILE)
-    #
-    #     print 'j: ', j, '  subject: ', lines[j]
-    # for roi_index in range(len(ROI)):
-    #     nib.save(nib.Nifti1Image(region_result_RW, affine), RW_RESULT_DATA_DIR + ROI[roi_index] + '_' +RW_ATLAS_BASED_AGGRATOR_RESULT_FILE)
 
     endtime = datetime.datetime.now()
     print 'Time cost: ', (endtime - starttime)

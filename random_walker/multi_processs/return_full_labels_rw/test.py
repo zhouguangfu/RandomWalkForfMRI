@@ -61,11 +61,16 @@ def process_single_subject(subject_image_marker):
                              all_atlas_based_markers[i][atlas_index][:, 2], atlas_index] = i + 1
 
         markers = np.zeros_like(image[..., subject_index])
-        volume = morphology.binary_dilation(all_prob_mask).astype(all_prob_mask.dtype)
-        # markers[volume == 0] = -1 #not consider -------------!!!!!!
-        markers[volume == 0] = -1
-        volume[all_prob_mask != 0] = 0
-        markers[volume != 0] = 5 #backgroud
+        # volume = morphology.binary_dilation(all_prob_mask).astype(all_prob_mask.dtype)
+        # # markers[volume == 0] = -1 #not consider -------------!!!!!!
+        # markers[volume == 0] = -1
+        # volume[all_prob_mask != 0] = 0
+        # markers[volume != 0] = 5 #backgroud
+
+        #prob_mask <= 0 --- background
+        markers[all_prob_mask == 0] = -1
+        markers[image[image[all_prob_mask > 0, subject_index] <= 0, subject_index]] = 5
+
         markers[region_result_RW[..., atlas_index] != 0] = region_result_RW[region_result_RW[..., atlas_index] != 0, atlas_index]
         rw_labels = random_walker(image[..., subject_index], markers, beta=10, mode='bf')
         region_result_RW[rw_labels > 0, atlas_index] = rw_labels[rw_labels > 0]

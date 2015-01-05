@@ -2,7 +2,7 @@ __author__ = 'zgf'
 
 import numpy as np
 import matplotlib.pyplot as plt
-
+from configs import *
 
 def show_barchart(x, std_x, xlabel, ylabel, title, color, legend_labels, ROI):
     plt.clf()
