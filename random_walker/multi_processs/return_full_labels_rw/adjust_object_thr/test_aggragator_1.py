@@ -1,5 +1,4 @@
 __author__ = 'zgf'
-__author__ = 'zhouguangfu'
 
 import datetime
 import multiprocessing
@@ -11,7 +10,7 @@ from configs import *
 SUBJECT_NUM = 10
 ATLAS_NUM = 202
 BACKGROUND_THR = 0
-TOP_RANK = 10 # 0 - 100
+TOP_RANK = 180 # 0 - 100
 
 def atlas_based_aggragator(subject_index):
     region_result_RW = nib.load(RW_RESULT_DATA_DIR + str(subject_index)+ '_'+ str(TOP_RANK) + '_' + RW_ATLAS_BASED_RESULT_FILE).get_data()

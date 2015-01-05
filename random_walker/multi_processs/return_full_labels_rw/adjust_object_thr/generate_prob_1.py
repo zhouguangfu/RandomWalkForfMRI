@@ -5,9 +5,9 @@ import numpy as np
 import nibabel as nib
 from configs import *
 
-SUBJECT_NUM = 4
+SUBJECT_NUM = 10
 ATLAS_NUM = 202
-TOP = np.arange(10, 110, 10)
+TOP = np.arange(10, 190, 10)
 
 if __name__ == "__main__":
     starttime = datetime.datetime.now()
@@ -74,10 +74,10 @@ if __name__ == "__main__":
             left_val = left_w0 * left_w1 * (left_u0 - left_u1) * (left_u0 - left_u1)
 
             right_u = image[right_brain_mask > 0, subject_index].mean()
-            right_w0 = ((temp_image[..., subject_index] == 1).sum() + (temp_image[..., subject_index] == 3).sum()) *1. \
+            right_w0 = ((temp_image[..., subject_index] == 2).sum() + (temp_image[..., subject_index] == 4).sum()) *1. \
                       / (temp_image[right_brain_mask > 0, subject_index] == 5).sum()
             right_w1 = 1.0 - right_w0
-            right_label_mask = np.logical_or(temp_image[..., subject_index == 1], temp_image[..., subject_index] == 3)
+            right_label_mask = np.logical_or(temp_image[..., subject_index == 2], temp_image[..., subject_index] == 4)
             right_u0 = image[right_label_mask, subject_index].mean()
             right_u1 = (right_u - right_w0 * right_u0) / right_w1
             right_val = right_w0 * right_w1 * (right_u0 - right_u1) * (right_u0 - right_u1)
