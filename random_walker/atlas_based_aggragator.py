@@ -9,11 +9,11 @@ import nibabel as nib
 from configs import *
 
 SUBJECT_NUM = 70
-ATLAS_NUM = 202
+TOP_RANK = 10 # 0 - 100
 
 def atlas_based_aggragator(subject_index):
     region_result_RW = nib.load(RW_RESULT_DATA_DIR + str(subject_index)+ '_'+ RW_ATLAS_BASED_RESULT_FILE).get_data()
-    weight = np.ones(ATLAS_NUM, dtype=float)
+    weight = np.ones(TOP_RANK, dtype=float)
     weighted_result = []
     for roi_index in range(len(ROI) + 1):
         temp = np.zeros_like(region_result_RW)
