@@ -14,9 +14,7 @@ import numpy as np
 import numpy as np
 import matplotlib.pyplot as plt
 
-RESULT_DATA_DIR = "G:/workingdir/result/asrg/doc/"
-ASRG_RESULT_DOC_DATA_DIR = "G:/workingdir/result/asrg/doc/test/"
-TEMP_IMG_DIR = 'G:/workingdir/result/asrg/doc/temp.png'
+from configs import *
 
 def show_barchart(x, y, std_x, std_y, xlabel, ylabel, title, ROI):
 
