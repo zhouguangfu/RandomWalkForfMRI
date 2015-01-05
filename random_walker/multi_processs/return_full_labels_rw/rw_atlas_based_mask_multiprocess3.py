@@ -24,7 +24,7 @@ def process_single_subject(subject_index):
     global image, complete_atlas_data, left_barin_mask, right_barin_mask, TOP_RANK
 
     indexs =  np.load(ATLAS_TOP_DIR + str(subject_index) + '_top_sort.npy')
-    region_result_RW = np.zeros_like(complete_atlas_data)
+    region_result_RW = np.zeros((complete_atlas_data.shape[0], complete_atlas_data.shape[1], complete_atlas_data.shape[2], TOP_RANK))
 
     for atlas_index in range(TOP_RANK):
         atlas_data = complete_atlas_data[..., indexs[atlas_index]]
