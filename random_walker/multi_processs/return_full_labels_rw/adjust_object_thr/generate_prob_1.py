@@ -7,7 +7,7 @@ from configs import *
 
 SUBJECT_NUM = 4
 ATLAS_NUM = 202
-BACKGROUND_THR = np.arange(0.0, 2.3, 0.2)
+TOP = np.arange(10, 110, 10)
 
 if __name__ == "__main__":
     starttime = datetime.datetime.now()
@@ -43,7 +43,7 @@ if __name__ == "__main__":
                 #         u1 = (u - w0 * u0) / w1
                 #         con_val[i, j] = w0 * w1 * (u0 - u1) * (u0 - u1)
 
-    for thr in BACKGROUND_THR:
+    for thr in TOP:
         rw_atlas_based_aggrator_result = np.zeros((mask.shape[0], mask.shape[1], mask.shape[2], SUBJECT_NUM, len(ROI) + 1), dtype=np.float)
         for roi_index in range(len(ROI) + 1):
             if roi_index == len(ROI):

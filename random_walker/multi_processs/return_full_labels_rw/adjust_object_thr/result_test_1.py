@@ -52,17 +52,25 @@ print len(vals)
 
 subjects = []
 
-for i in range(4):
+for i in range(10):
     temp = []
-    for j in range(12):
+    for j in range(10):
         temp.append(vals[i + j * 4][0])
     subjects.append(temp)
 
 import matplotlib.pyplot as plt
-plt.plot(range(12), subjects[0], '--ro')
-plt.plot(range(12), subjects[1], '--go')
-plt.plot(range(12), subjects[2], '--bo')
-plt.plot(range(12), subjects[3], '--yo')
+plt.plot(range(10), subjects[0], '--ro')
+plt.plot(range(10), subjects[1], '--go')
+plt.plot(range(10), subjects[2], '--bo')
+plt.plot(range(10), subjects[3], '--yo')
+
+# plt.plot(range(10), subjects[4], '--ro')
+# plt.plot(range(10), subjects[5], '--go')
+# plt.plot(range(10), subjects[6], '--bo')
+# plt.plot(range(10), subjects[7], '--yo')
+#
+# plt.plot(range(10), subjects[8], '--ro')
+# plt.plot(range(10), subjects[9], '--go')
 
 plt.show()
 

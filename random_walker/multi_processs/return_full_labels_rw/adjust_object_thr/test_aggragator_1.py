@@ -8,12 +8,13 @@ import nibabel as nib
 
 from configs import *
 
-SUBJECT_NUM = 4
+SUBJECT_NUM = 10
 ATLAS_NUM = 202
-BACKGROUND_THR = 2.2
+BACKGROUND_THR = 0
+TOP_RANK = 10 # 0 - 100
 
 def atlas_based_aggragator(subject_index):
-    region_result_RW = nib.load(RW_RESULT_DATA_DIR + str(subject_index)+ '_'+ str(BACKGROUND_THR) + '_' + RW_ATLAS_BASED_RESULT_FILE).get_data()
+    region_result_RW = nib.load(RW_RESULT_DATA_DIR + str(subject_index)+ '_'+ str(TOP_RANK) + '_' + RW_ATLAS_BASED_RESULT_FILE).get_data()
     weight = np.ones(ATLAS_NUM, dtype=float)
     weighted_result = []
     for roi_index in range(len(ROI) + 1):
@@ -46,10 +47,10 @@ if __name__ == "__main__":
     for roi_index in range(len(ROI) + 1):
         if roi_index == len(ROI):
             nib.save(nib.Nifti1Image(rw_atlas_based_aggrator_result[..., roi_index], affine),
-                     RW_RESULT_DATA_DIR + str(BACKGROUND_THR) + '_' + RW_PROB_BACKGROUND_RESULT_FILE)
+                     RW_AGGRAGATOR_RESULT_DATA_DIR + str(TOP_RANK) + '_' + RW_PROB_BACKGROUND_RESULT_FILE)
         else:
             nib.save(nib.Nifti1Image(rw_atlas_based_aggrator_result[..., roi_index], affine),
-                     RW_RESULT_DATA_DIR + ROI[roi_index] + '_' + str(BACKGROUND_THR) + '_' +RW_ATLAS_BASED_AGGRATOR_RESULT_FILE)
+                     RW_AGGRAGATOR_RESULT_DATA_DIR + ROI[roi_index] + '_' + str(TOP_RANK) + '_' +RW_ATLAS_BASED_AGGRATOR_RESULT_FILE)
 
     endtime = datetime.datetime.now()
     print 'Time cost: ', (endtime - starttime)
