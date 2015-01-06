@@ -6,7 +6,6 @@ import nibabel as nib
 from configs import *
 
 SUBJECT_NUM = 70
-ATLAS_NUM = 202
 
 if __name__ == "__main__":
     starttime = datetime.datetime.now()

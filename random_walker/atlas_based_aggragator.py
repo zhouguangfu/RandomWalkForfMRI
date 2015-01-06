@@ -9,7 +9,6 @@ import nibabel as nib
 from configs import *
 
 SUBJECT_NUM = 70
-TOP_RANK = 10 # 0 - 100
 
 def atlas_based_aggragator(subject_index):
     region_result_RW = nib.load(RW_RESULT_DATA_DIR + str(subject_index)+ '_'+ RW_ATLAS_BASED_RESULT_FILE).get_data()

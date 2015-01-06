@@ -9,8 +9,6 @@ from docx import Document
 from skimage.segmentation import random_walker
 from configs import *
 
-TOP_RANK = 10 # 0 - 100
-
 #global varibale
 image = nib.load(ACTIVATION_DATA_DIR)
 affine = image.get_affine()
