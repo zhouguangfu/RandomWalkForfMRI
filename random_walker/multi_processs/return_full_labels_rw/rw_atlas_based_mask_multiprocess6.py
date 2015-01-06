@@ -35,20 +35,20 @@ def process_single_subject(subject_index):
         markers[temp_volume <= 0] = 3 #background
 
         z_atlas_mask = np.zeros_like(atlas_data)
-        if (atlas_data == 1).sum() < Z_TOP :
+        if (atlas_data == 1).sum() <= Z_TOP :
             z_atlas_mask[atlas_data == 1] = 1
         else:
-            temp_image = image[z_atlas_mask == 1, subject_index]
+            temp_image = image[atlas_data == 1, subject_index]
             threshold = -np.sort(-temp_image)[Z_TOP]
             z_atlas_mask[image[..., subject_index] > threshold] = 1
             z_atlas_mask[atlas_data != 1] = 0
         markers[z_atlas_mask == 1] = 1
 
         z_atlas_mask = np.zeros_like(atlas_data)
-        if (atlas_data == 3).sum() < Z_TOP :
+        if (atlas_data == 3).sum() <= Z_TOP :
             z_atlas_mask[atlas_data == 3] = 1
         else:
-            temp_image = image[z_atlas_mask == 3, subject_index]
+            temp_image = image[atlas_data == 3, subject_index]
             threshold = -np.sort(-temp_image)[Z_TOP]
             z_atlas_mask[image[..., subject_index] > threshold] = 1
             z_atlas_mask[atlas_data != 3] = 0
@@ -74,20 +74,20 @@ def process_single_subject(subject_index):
         markers[temp_volume <= 0] = 3 #background
 
         z_atlas_mask = np.zeros_like(atlas_data)
-        if (atlas_data == 2).sum() < Z_TOP :
+        if (atlas_data == 2).sum() <= Z_TOP :
             z_atlas_mask[atlas_data == 2] = 1
         else:
-            temp_image = image[z_atlas_mask == 2, subject_index]
+            temp_image = image[atlas_data == 2, subject_index]
             threshold = -np.sort(-temp_image)[Z_TOP]
             z_atlas_mask[image[..., subject_index] > threshold] = 1
             z_atlas_mask[atlas_data != 2] = 0
         markers[z_atlas_mask == 1] = 1
 
         z_atlas_mask = np.zeros_like(atlas_data)
-        if (atlas_data == 4).sum() < Z_TOP :
+        if (atlas_data == 4).sum() <= Z_TOP :
             z_atlas_mask[atlas_data == 4] = 1
         else:
-            temp_image = image[z_atlas_mask == 4, subject_index]
+            temp_image = image[atlas_data == 4, subject_index]
             threshold = -np.sort(-temp_image)[Z_TOP]
             z_atlas_mask[image[..., subject_index] > threshold] = 1
             z_atlas_mask[atlas_data != 4] = 0
