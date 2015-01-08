@@ -1,5 +1,4 @@
 __author__ = 'zgf'
-__author__ = 'zhouguangfu'
 
 import datetime
 import multiprocessing
@@ -10,6 +9,10 @@ from configs import *
 
 SUBJECT_NUM = 70
 
+image = nib.load(ACTIVATION_DATA_DIR)
+affine = image.get_affine()
+image = image.get_data()
+
 def atlas_based_aggragator(subject_index):
     region_result_RW = nib.load(RW_RESULT_DATA_DIR + str(subject_index)+ '_'+ RW_ATLAS_BASED_RESULT_FILE).get_data()
     weight = np.ones(TOP_RANK, dtype=float)
@@ -17,7 +20,19 @@ def atlas_based_aggragator(subject_index):
     for roi_index in range(len(ROI) + 1):
         temp = np.zeros_like(region_result_RW)
         temp[region_result_RW == (roi_index + 1)] = 1
+
+
+        for i in range(TOP_RANK):
+            weight[i] = np.mean(image[temp[..., i] == 1, subject_index])
+
+        weight = np.arctan(weight) * 2 / 3.1415926
+
+        if weight.min() < 0:
+            weight += np.abs(weight.min())
+        weight = weight / weight.sum()
         weighted_result.append(np.average(temp, axis=3, weights=weight))
+
+
         print 'j: ', subject_index, '   roi_index: ', roi_index
 
     return weighted_result

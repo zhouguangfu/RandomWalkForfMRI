@@ -30,9 +30,9 @@ def process_single_subject(subject_index):
 
         markers[right_barin_mask == 0] = -1
         temp_volume = image[..., subject_index].copy()
-        temp_volume[right_barin_mask == 0] = 1
-        temp_volume[temp_volume > 0] = 1
-        markers[temp_volume <= 0] = 3 #background
+        temp_volume[right_barin_mask == 0] = 1000
+        temp_volume[temp_volume > BACKGROUND_THR] = 1000
+        markers[temp_volume <= BACKGROUND_THR] = 3 #background
 
         z_atlas_mask = np.zeros_like(atlas_data)
         if (atlas_data == 1).sum() <= Z_TOP :
@@ -69,9 +69,9 @@ def process_single_subject(subject_index):
 
         markers[left_barin_mask == 0] = -1
         temp_volume = image[..., subject_index].copy()
-        temp_volume[left_barin_mask == 0] = 1
-        temp_volume[temp_volume > 0] = 1
-        markers[temp_volume <= 0] = 3 #background
+        temp_volume[left_barin_mask == 0] = 1000
+        temp_volume[temp_volume > BACKGROUND_THR] = 1000
+        markers[temp_volume <= BACKGROUND_THR] = 3 #background
 
         z_atlas_mask = np.zeros_like(atlas_data)
         if (atlas_data == 2).sum() <= Z_TOP :
