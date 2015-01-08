@@ -1,7 +1,6 @@
 __author__ = 'zgf'
 
 import datetime
-
 import numpy as np
 import nibabel as nib
 
