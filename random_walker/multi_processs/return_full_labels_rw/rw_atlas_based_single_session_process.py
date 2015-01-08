@@ -19,8 +19,8 @@ BACKGROUND_MAKRERS_THR = [-3, -2, -1, 0, 1, 2, 3] #len 7 default - (-1)
 OBJECT_MARKERS_NUM = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100] #len 10 default - 30
 ATLAS_SELECTED = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 120, 150] #len 12 default - 30
 
-DEFAULT_TOP_RANK = 30 # 0 - 100
-DEFAULT_Z_TOP = 30
+DEFAULT_TOP_RANK = 10 # 0 - 100
+DEFAULT_Z_TOP = 50
 DEFAULT_BACKGROUND_THR = -1
 
 #global varibale
@@ -67,7 +67,7 @@ def process_single_subject(subject_index):
 
         markers[right_barin_mask == 0] = -1
         temp_volume = image[..., subject_index].copy()
-        temp_volume[left_barin_mask == 0] = 1000
+        temp_volume[right_barin_mask == 0] = 1000
         temp_volume[temp_volume > DEFAULT_BACKGROUND_THR] = 1000
         markers[temp_volume <= DEFAULT_BACKGROUND_THR] = 3 #background
 
@@ -188,11 +188,16 @@ if __name__ == "__main__":
     all_means = []
     all_stds = []
 
+    ORIGIN_RW_AGGRAGATOR_RESULT_DATA_DIR = RW_AGGRAGATOR_RESULT_DATA_DIR
     for thr in BACKGROUND_MAKRERS_THR:
+        RW_AGGRAGATOR_RESULT_DATA_DIR = ORIGIN_RW_AGGRAGATOR_RESULT_DATA_DIR
         DIR_PREFIX = str(thr) + '/'
         if not os.path.exists(RW_AGGRAGATOR_RESULT_DATA_DIR + DIR_PREFIX):
             os.makedirs(RW_AGGRAGATOR_RESULT_DATA_DIR + DIR_PREFIX)
         RW_AGGRAGATOR_RESULT_DATA_DIR = RW_AGGRAGATOR_RESULT_DATA_DIR + DIR_PREFIX
+
+        DEFAULT_BACKGROUND_THR = thr
+        print '---------------------------------', thr, '---------------------------------------'
 
         rw_atlas_based_aggrator_result = np.zeros((mask.shape[0], mask.shape[1], mask.shape[2], SESSION_NUMBERS, len(ROI) + 1), dtype=np.float)
 
@@ -230,7 +235,7 @@ if __name__ == "__main__":
         all_means.append(means)
         all_stds.append(stds)
 
-    import matplotlib.pyplot as plt
+
 
     print 'All_means: ', all_means
     print 'All_stds: ', all_stds
@@ -238,10 +243,13 @@ if __name__ == "__main__":
     all_means = np.array(all_means)
     all_stds = np.array(all_stds)
 
-    plt.plot(SESSION_NUMBERS, all_means[:, 0].tolist(), '--ro')
-    plt.plot(SESSION_NUMBERS, all_means[:, 1].tolist(), '--go')
-    plt.plot(SESSION_NUMBERS, all_means[:, 2].tolist(), '--bo')
-    plt.plot(SESSION_NUMBERS, all_means[:, 3].tolist(), '--yo')
+    import matplotlib.pyplot as plt
+
+    plt.plot(BACKGROUND_MAKRERS_THR, all_means[:, 0].tolist(), '--ro')
+    plt.plot(BACKGROUND_MAKRERS_THR, all_means[:, 1].tolist(), '--go')
+    plt.plot(BACKGROUND_MAKRERS_THR, all_means[:, 2].tolist(), '--bo')
+    plt.plot(BACKGROUND_MAKRERS_THR, all_means[:, 3].tolist(), '--yo')
+    plt.show()
 
     endtime = datetime.datetime.now()
     print 'Time cost: ', (endtime - starttime)
