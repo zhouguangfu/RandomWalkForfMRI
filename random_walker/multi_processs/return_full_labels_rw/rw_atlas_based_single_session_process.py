@@ -17,11 +17,12 @@ SESSION_NUMBERS = 7
 
 BACKGROUND_MAKRERS_THR = [-3, -2, -1, 0, 1, 2, 3] #len 7 default - (-1)
 OBJECT_MARKERS_NUM = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100] #len 10 default - 30
-ATLAS_SELECTED = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 120, 150] #len 12 default - 30
+# ATLAS_SELECTED = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140,150] #len 12 default - 30
+ATLAS_SELECTED = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100] #len 12 default - 30
 
-DEFAULT_TOP_RANK = 30 # 0 - 100
-DEFAULT_Z_TOP = 50
-DEFAULT_BACKGROUND_THR = 3
+DEFAULT_TOP_RANK = 10 # 0 - 100, default
+DEFAULT_Z_TOP = 60 #default 60
+DEFAULT_BACKGROUND_THR = -1 #default -1
 
 #global varibale
 image = nib.load(ACTIVATION_DATA_DIR)
@@ -181,7 +182,6 @@ if __name__ == "__main__":
     mask = img.get_data()
     affine = img.get_affine()
 
-
     if not os.path.exists(RW_AGGRAGATOR_RESULT_DATA_DIR):
         os.makedirs(RW_AGGRAGATOR_RESULT_DATA_DIR)
 
@@ -191,7 +191,8 @@ if __name__ == "__main__":
     ORIGIN_RW_AGGRAGATOR_RESULT_DATA_DIR = RW_AGGRAGATOR_RESULT_DATA_DIR
 
     # for thr in BACKGROUND_MAKRERS_THR:
-    for thr in OBJECT_MARKERS_NUM:
+    # for thr in OBJECT_MARKERS_NUM:
+    for thr in ATLAS_SELECTED:
 
         RW_AGGRAGATOR_RESULT_DATA_DIR = ORIGIN_RW_AGGRAGATOR_RESULT_DATA_DIR
         DIR_PREFIX = str(thr) + '/'
@@ -200,7 +201,8 @@ if __name__ == "__main__":
         RW_AGGRAGATOR_RESULT_DATA_DIR = RW_AGGRAGATOR_RESULT_DATA_DIR + DIR_PREFIX
 
         # DEFAULT_BACKGROUND_THR = thr
-        DEFAULT_Z_TOP = thr
+        # DEFAULT_Z_TOP = thr
+        DEFAULT_TOP_RANK = thr
         print '---------------------------------', thr, '---------------------------------------'
 
         rw_atlas_based_aggrator_result = np.zeros((mask.shape[0], mask.shape[1], mask.shape[2], SESSION_NUMBERS, len(ROI) + 1), dtype=np.float)
