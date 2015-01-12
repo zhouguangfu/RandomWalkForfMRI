@@ -74,8 +74,10 @@ if __name__ == "__main__":
             lines.append(line.rstrip('\r\n'))
 
     all_image_data = generate_complete_atlas_label()
+    all_image_data[all_image_data < 0] = 0
     generate_atlas_top_index(all_image_data)
-
+    # all_202_image_data[all_202_image_data < 0] = 0
+    # generate_atlas_top_index(all_202_image_data)
 
     endtime = datetime.datetime.now()
     print 'Time cost: ', (endtime - starttime)
