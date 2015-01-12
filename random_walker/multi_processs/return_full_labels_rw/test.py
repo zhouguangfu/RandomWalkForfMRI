@@ -103,9 +103,9 @@ def process_single_subject(subject_index):
         second_region_result_RW = np.zeros((complete_atlas_data.shape[0], complete_atlas_data.shape[1], complete_atlas_data.shape[2], DEFAULT_TOP_RANK))
         #seconde process
         #left brain
-        left_rois_mask = np.logical_or(region_result_RW[..., atlas_index] == 1, region_result_RW[..., atlas_index] == 3)
+        left_rois_mask = (region_result_RW[..., subject_index] == 1)
         markers = np.zeros_like(image[..., subject_index])
-        markers[left_rois_mask == 0] = -1
+        markers[region_result_RW == 0] = -1
         markers[region_result_RW[..., atlas_index] == 1] = 1
         markers[region_result_RW[..., atlas_index] == 3] = 2
         rw_labels = random_walker(image[..., subject_index], markers, beta=10, mode='bf')
@@ -113,7 +113,7 @@ def process_single_subject(subject_index):
         second_region_result_RW[rw_labels == 2, atlas_index] = 3
 
         #right brain
-        right_rois_mask = np.logical_or(region_result_RW[..., atlas_index] == 2, region_result_RW[..., atlas_index] == 4)
+        right_rois_mask = (region_result_RW[..., subject_index] == 2)
         markers = np.zeros_like(image[..., subject_index])
         markers[right_rois_mask == 0] = -1
         markers[region_result_RW[..., atlas_index] == 2] = 1
