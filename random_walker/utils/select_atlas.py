@@ -26,10 +26,10 @@ def generate_complete_atlas_label():
     complete_image_list = []
 
     for i in range(ATLAS_NUM):
-        if (mask[..., i] == 1).sum() == 0 or \
-                        (mask[..., i] == 2).sum() == 0 or \
-                        (mask[..., i] == 3).sum() == 0 or \
-                        (mask[..., i] == 4).sum() == 0:
+        if (mask[..., i] == 1).sum() <= 10 or \
+                        (mask[..., i] == 2).sum() <= 10 or \
+                        (mask[..., i] == 3).sum() <= 10 or \
+                        (mask[..., i] == 4).sum() <= 10:
             pass
         else:
             complete_atlas_list.append(mask[..., i])
@@ -43,6 +43,7 @@ def generate_complete_atlas_label():
 
     nib.save(nib.Nifti1Image(complete_atlas_data, affine), ATLAS_TOP_DIR +  'complete_atlas_label.nii.gz')
     nib.save(nib.Nifti1Image(complete_image_data, affine), ATLAS_TOP_DIR +  'complete_image_data.nii.gz')
+    print 'complete_image_data.shape[3]: ', complete_image_data.shape[3]
     return complete_image_data
 
 def generate_atlas_top_index(all_image_data):

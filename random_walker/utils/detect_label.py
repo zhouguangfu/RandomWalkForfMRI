@@ -7,9 +7,6 @@ import csv
 
 from configs import *
 
-TOP_RANK = 30 # 0 - 100
-ATLAS_NUM = 202
-
 #global varibale
 mask = nib.load(ATLAS_SUBJECTS_LABELS_DIR).get_data()
 
@@ -28,10 +25,10 @@ def process_single_subject(subject_index):
 
     for atlas_index in range(TOP_RANK):
         atlas_data = complete_atlas_data[..., indexs[atlas_index]]
-        if (atlas_data == 1).sum() == 0 or \
-                        (atlas_data == 2).sum() == 0 or \
-                        (atlas_data == 3).sum() == 0 or \
-                        (atlas_data == 4).sum() == 0:
+        if (atlas_data == 1).sum() <= 10 or \
+                        (atlas_data == 2).sum() <= 10 or \
+                        (atlas_data == 3).sum() <= 10 or \
+                        (atlas_data == 4).sum() <= 10:
                 print 'subject_index: ', subject_index,  '  atlas_index: ', atlas_index
     print '--------------------------------', subject_index, '--------------------------------'
 

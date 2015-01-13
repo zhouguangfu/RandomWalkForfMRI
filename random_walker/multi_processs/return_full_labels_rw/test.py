@@ -12,7 +12,7 @@ from configs import *
 from analysis.inter_subject_bar import show_barchart
 from skimage.segmentation import random_walker
 
-SUBJECT_SESSION_INDEX = 0 #0, 1, 2, 3, ,4 ,5, 6, 7, 8, 9
+SUBJECT_SESSION_INDEX = 9 #0, 1, 2, 3, ,4 ,5, 6, 7, 8, 9
 SESSION_NUMBERS = 7
 
 BACKGROUND_MAKRERS_THR = [-3, -2, -1, 0, 1, 2, 3] #len 7 default - (-1)
@@ -46,7 +46,7 @@ def atlas_based_aggragator(subject_index):
     region_result_RW = process_single_subject(subject_index)
     weight = np.ones(DEFAULT_TOP_RANK, dtype=float)
     weighted_result = []
-    for roi_index in range(len(ROI) + 1):
+    for roi_index in range(len(ROI)):
         temp = np.zeros_like(region_result_RW)
         temp[region_result_RW == (roi_index + 1)] = 1
         weighted_result.append(np.average(temp, axis=3, weights=weight))
@@ -59,6 +59,7 @@ def process_single_subject(subject_index):
 
     indexs =  np.load(ATLAS_TOP_DIR + str(subject_index) + '_top_sort.npy')
     region_result_RW = np.zeros((complete_atlas_data.shape[0], complete_atlas_data.shape[1], complete_atlas_data.shape[2], DEFAULT_TOP_RANK))
+    second_region_result_RW = np.zeros((complete_atlas_data.shape[0], complete_atlas_data.shape[1], complete_atlas_data.shape[2], DEFAULT_TOP_RANK))
 
     for atlas_index in range(DEFAULT_TOP_RANK):
         atlas_data = complete_atlas_data[..., indexs[atlas_index]]
@@ -97,42 +98,54 @@ def process_single_subject(subject_index):
 
         # print 'subject_index:', subject_index, '    atlas_index:', atlas_index
 
-        nib.save(nib.Nifti1Image(region_result_RW, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + "random_walk_one.nii.gz")
+        # nib.save(nib.Nifti1Image(region_result_RW, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +"_random_walk_one.nii.gz")
 
 
-        second_region_result_RW = np.zeros((complete_atlas_data.shape[0], complete_atlas_data.shape[1], complete_atlas_data.shape[2], DEFAULT_TOP_RANK))
         #seconde process
         #left brain
-        left_rois_mask = (region_result_RW[..., subject_index] == 1)
+        left_rois_mask = (region_result_RW[..., atlas_index] == 1)
         markers = np.zeros_like(image[..., subject_index])
-        markers[region_result_RW == 0] = -1
-        markers[region_result_RW[..., atlas_index] == 1] = 1
-        markers[region_result_RW[..., atlas_index] == 3] = 2
+        markers[left_rois_mask == 0] = -1
+        markers[atlas_data == 1] = 1
+        markers[atlas_data == 3] = 2
         rw_labels = random_walker(image[..., subject_index], markers, beta=10, mode='bf')
         second_region_result_RW[rw_labels == 1, atlas_index] = 1
         second_region_result_RW[rw_labels == 2, atlas_index] = 3
 
         #right brain
-        right_rois_mask = (region_result_RW[..., subject_index] == 2)
+        right_rois_mask = (region_result_RW[..., atlas_index] == 2)
         markers = np.zeros_like(image[..., subject_index])
         markers[right_rois_mask == 0] = -1
-        markers[region_result_RW[..., atlas_index] == 2] = 1
-        markers[region_result_RW[..., atlas_index] == 4] = 2
+        markers[atlas_data == 2] = 1
+        markers[atlas_data == 4] = 2
         rw_labels = random_walker(image[..., subject_index], markers, beta=10, mode='bf')
         second_region_result_RW[rw_labels == 1, atlas_index] = 2
         second_region_result_RW[rw_labels == 2, atlas_index] = 4
 
-        nib.save(nib.Nifti1Image(second_region_result_RW, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + "random_walk_two.nii.gz")
+        # nib.save(nib.Nifti1Image(second_region_result_RW, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) + "_random_walk_two.nii.gz")
+        print 'subject_index: ', subject_index, 'atlas_index:', atlas_index
+
     print 'subject_index:', subject_index, 'atlas-based rw finished...'
 
-    return region_result_RW
+    return second_region_result_RW
 
 def generate_rw_prob_result(rw_atlas_based_aggrator_result):
+    nib.save(nib.Nifti1Image(rw_atlas_based_aggrator_result[..., 0], affine),
+            RW_AGGRAGATOR_RESULT_DATA_DIR + ROI[0] + '_aggragator.nii.gz')
+    nib.save(nib.Nifti1Image(rw_atlas_based_aggrator_result[..., 1], affine),
+            RW_AGGRAGATOR_RESULT_DATA_DIR + ROI[1] + '_aggragator.nii.gz')
+    nib.save(nib.Nifti1Image(rw_atlas_based_aggrator_result[..., 2], affine),
+            RW_AGGRAGATOR_RESULT_DATA_DIR + ROI[2] + '_aggragator.nii.gz')
+    nib.save(nib.Nifti1Image(rw_atlas_based_aggrator_result[..., 3], affine),
+            RW_AGGRAGATOR_RESULT_DATA_DIR + ROI[3] + '_aggragator.nii.gz')
+
+    THRESHOLD = 0.5
+
     #generate the prob result
     temp_image = np.zeros((mask.shape[0], mask.shape[1], mask.shape[2], SESSION_NUMBERS))
     for subject_index in range(SESSION_NUMBERS):
         for roi_index in range(len(ROI)):
-            temp_image[rw_atlas_based_aggrator_result[..., subject_index, roi_index] > 0 , subject_index] = 1
+            temp_image[rw_atlas_based_aggrator_result[..., subject_index, roi_index] > THRESHOLD, subject_index] = 1
 
         coords = np.array(np.nonzero(temp_image[..., subject_index] == 1), dtype=np.int32).T
         for i in range(coords.shape[0]):
@@ -142,7 +155,6 @@ def generate_rw_prob_result(rw_atlas_based_aggrator_result):
                           rw_atlas_based_aggrator_result[coords[i, 0], coords[i, 1], coords[i, 2], subject_index, 2],
                           rw_atlas_based_aggrator_result[coords[i, 0], coords[i, 1], coords[i, 2], subject_index, 3]]).argmax() + 1
         print 'subject_index: ', subject_index
-    temp_image[temp_image == 5] = 0
     nib.save(nib.Nifti1Image(temp_image, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + RW_PROB_RESULT_FILE)
 
     return temp_image
@@ -164,6 +176,7 @@ if __name__ == "__main__":
     mask = img.get_data()
     affine = img.get_affine()
 
+    RW_AGGRAGATOR_RESULT_DATA_DIR += str(SUBJECT_SESSION_INDEX) + '/'
     if not os.path.exists(RW_AGGRAGATOR_RESULT_DATA_DIR):
         os.makedirs(RW_AGGRAGATOR_RESULT_DATA_DIR)
 
@@ -175,7 +188,7 @@ if __name__ == "__main__":
     # for thr in BACKGROUND_MAKRERS_THR:
     # for thr in OBJECT_MARKERS_NUM:
     # for thr in ATLAS_SELECTED:
-    for thr in [30]:
+    for thr in [60]:
 
         RW_AGGRAGATOR_RESULT_DATA_DIR = ORIGIN_RW_AGGRAGATOR_RESULT_DATA_DIR
         DIR_PREFIX = str(thr) + '/'
@@ -196,7 +209,7 @@ if __name__ == "__main__":
         pool.join()
 
         for i in range(SESSION_NUMBERS):
-            for roi_index in range(len(ROI) + 1):
+            for roi_index in range(len(ROI)):
                 rw_atlas_based_aggrator_result[..., i, roi_index] = pool_outputs[i][roi_index]
 
         # for roi_index in range(len(ROI) + 1):
@@ -230,13 +243,13 @@ if __name__ == "__main__":
     all_means = np.array(all_means)
     all_stds = np.array(all_stds)
 
-    import matplotlib.pyplot as plt
-
-    plt.plot(OBJECT_MARKERS_NUM, all_means[:, 0].tolist(), '--ro')
-    plt.plot(OBJECT_MARKERS_NUM, all_means[:, 1].tolist(), '--go')
-    plt.plot(OBJECT_MARKERS_NUM, all_means[:, 2].tolist(), '--bo')
-    plt.plot(OBJECT_MARKERS_NUM, all_means[:, 3].tolist(), '--yo')
-    plt.show()
+    # import matplotlib.pyplot as plt
+    #
+    # plt.plot(OBJECT_MARKERS_NUM, all_means[:, 0].tolist(), '--ro')
+    # plt.plot(OBJECT_MARKERS_NUM, all_means[:, 1].tolist(), '--go')
+    # plt.plot(OBJECT_MARKERS_NUM, all_means[:, 2].tolist(), '--bo')
+    # plt.plot(OBJECT_MARKERS_NUM, all_means[:, 3].tolist(), '--yo')
+    # plt.show()
 
     endtime = datetime.datetime.now()
     print 'Time cost: ', (endtime - starttime)
