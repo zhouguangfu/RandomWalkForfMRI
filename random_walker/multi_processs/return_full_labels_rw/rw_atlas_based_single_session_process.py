@@ -57,11 +57,20 @@ def atlas_based_aggragator(subject_index):
 def process_single_subject(subject_index):
     global image, complete_atlas_data, left_barin_mask, right_barin_mask
 
-    indexs =  np.load(ATLAS_TOP_DIR + str(subject_index) + '_top_sort.npy')
     region_result_RW = np.zeros((complete_atlas_data.shape[0], complete_atlas_data.shape[1], complete_atlas_data.shape[2], DEFAULT_TOP_RANK))
 
     for atlas_index in range(DEFAULT_TOP_RANK):
-        atlas_data = complete_atlas_data[..., indexs[atlas_index]]
+        atlas_data = np.zeros_like(complete_atlas_data[..., 0])
+
+        r_OFA_indexs =  np.load(ATLAS_TOP_DIR + ROI[0] + '_' + str(subject_index) + '_top_sort.npy')
+        l_OFA_indexs =  np.load(ATLAS_TOP_DIR + ROI[1] + '_' + str(subject_index) + '_top_sort.npy')
+        r_pFus_indexs =  np.load(ATLAS_TOP_DIR + ROI[2] + '_' + str(subject_index) + '_top_sort.npy')
+        l_pFus_indexs =  np.load(ATLAS_TOP_DIR + ROI[3] + '_' + str(subject_index) + '_top_sort.npy')
+
+        atlas_data[complete_atlas_data[..., r_OFA_indexs[atlas_index]] == 1] = 1
+        atlas_data[complete_atlas_data[..., l_OFA_indexs[atlas_index]] == 2] = 2
+        atlas_data[complete_atlas_data[..., r_pFus_indexs[atlas_index]] == 3] = 3
+        atlas_data[complete_atlas_data[..., l_pFus_indexs[atlas_index]] == 4] = 4
 
         #process right brain
         markers = np.zeros_like(image[..., subject_index])

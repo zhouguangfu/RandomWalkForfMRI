@@ -39,7 +39,7 @@ def generate_atlas_top_index(all_image_data):
             for j in range(all_image_data.shape[3]):
                 vector2 = all_image_data[roi_mask_list[roi_index], j]
                 simility_vals[j] = np.corrcoef(vector1, vector2)[0, 1]
-                print 'i: ', i, '   j: ', j
+                # print 'i: ', i, '   roi_index: ', roi_index, ' j: ', j
 
             index = np.argsort(-simility_vals)
             np.save(ATLAS_TOP_DIR + ROI[roi_index] + '_' + str(i) + '_top_sort.npy', index)
@@ -47,13 +47,14 @@ def generate_atlas_top_index(all_image_data):
             per_roi_label_data = np.zeros((r_OFA_mask.shape[0], r_OFA_mask.shape[1], r_OFA_mask.shape[2], TOP_RANK))
             for top_index in range(TOP_RANK):
                 per_roi_label_data[..., top_index] = all_202_label_data[..., index[top_index]]
+                if (per_roi_label_data[..., top_index] == (roi_index + 1)).sum() <= 0:
+                    print 'subject_index: ', i, '----roi_index: ', roi_index, '-- ',  ' top_index: ', top_index, '----------'
+
             nib.save(nib.Nifti1Image(per_roi_label_data, affine), ATLAS_TOP_DIR + ROI[roi_index] + '_' + str(i) +
                                                             '_top_rank_' + str(TOP_RANK) + '.nii.gz')
 
             for k in range(index.shape[0]):
                 writer.writerow([index[k], round(simility_vals[index[k]], 4)])
-
-            print simility_vals
 
 if __name__ == "__main__":
     starttime = datetime.datetime.now()
