@@ -60,15 +60,109 @@ if __name__ == "__main__":
 
          print 'i: ', i, '   back: ', background, '   fore: ', foreground
 
+    skeletonize_rw = np.zeros_like(image)
+    skeletonize_markers_rw = np.zeros_like(image)
 
-    markers = np.zeros_like(image[..., 0])
-    markers[image[..., 0] == 0] = -1
-    markers[thin_foreground_image[..., 0] == 1] = 1
-    markers[thin_background_image[..., 0] == 1] = 2
+    for i in range(image.shape[3]):
 
-    rw_labels = random_walker(image[..., 0], markers, beta=10, mode='bf')
-    rw_labels[rw_labels == -1] = 0
-    nib.save(nib.Nifti1Image(rw_labels, affine), ATLAS_TOP_DIR + 'all_sessions_skeletonize_test.nii.gz')
+        # markers[thin_foreground_image[..., i] == 1] = 1
+        # markers[thin_background_image[..., i] == 1] = 2
+        # markers[r_OFA_mask == False] = -1
+
+        #r_OFA
+        markers = np.zeros_like(image[..., i])
+        z_atlas_mask = np.zeros_like(image[..., i])
+
+        fore_image = image[np.logical_and(r_OFA_mask, thin_foreground_image[..., i] == 1), i]
+        fore_threshold = -np.sort(-fore_image)[30]
+
+        back_image = image[np.logical_and(r_OFA_mask, thin_background_image[..., i] == 1), i]
+        back_threshold = np.sort(back_image)[180]
+
+        z_atlas_mask[np.logical_and(image[..., i] > fore_threshold, thin_foreground_image[..., i] == 1)] = 1
+        z_atlas_mask[np.logical_and(image[..., i] < back_threshold, thin_background_image[..., i] == 1)] = 2
+
+        markers[z_atlas_mask == 1] = 1
+        markers[z_atlas_mask == 2] = 2
+        markers[r_OFA_mask == False] = -1
+        skeletonize_markers_rw[..., i] = markers
+
+
+        rw_labels = random_walker(image[..., i], markers, beta=10, mode='bf')
+        rw_labels[rw_labels == -1] = 0
+        skeletonize_rw[rw_labels == 1, i] = 1
+
+        #l_OFA
+        markers = np.zeros_like(image[..., i])
+        z_atlas_mask = np.zeros_like(image[..., i])
+
+        fore_image = image[np.logical_and(l_OFA_mask, thin_foreground_image[..., i] == 1), i]
+        fore_threshold = -np.sort(-fore_image)[30]
+
+        back_image = image[np.logical_and(l_OFA_mask, thin_background_image[..., i] == 1), i]
+        back_threshold = np.sort(back_image)[180]
+
+        z_atlas_mask[np.logical_and(image[..., i] > fore_threshold, thin_foreground_image[..., i] == 1)] = 1
+        z_atlas_mask[np.logical_and(image[..., i] < back_threshold, thin_background_image[..., i] == 1)] = 2
+
+        markers[z_atlas_mask == 1] = 1
+        markers[z_atlas_mask == 2] = 2
+        markers[l_OFA_mask == False] = -1
+        skeletonize_markers_rw[..., i] = markers
+
+        rw_labels = random_walker(image[..., i], markers, beta=10, mode='bf')
+        rw_labels[rw_labels == -1] = 0
+        skeletonize_rw[rw_labels == 1, i] = 2
+
+        #l_pFus
+        markers = np.zeros_like(image[..., i])
+        z_atlas_mask = np.zeros_like(image[..., i])
+
+        fore_image = image[np.logical_and(l_pFus_mask, thin_foreground_image[..., i] == 1), i]
+        fore_threshold = -np.sort(-fore_image)[30]
+
+        back_image = image[np.logical_and(l_pFus_mask, thin_background_image[..., i] == 1), i]
+        back_threshold = np.sort(back_image)[180]
+
+        z_atlas_mask[np.logical_and(image[..., i] > fore_threshold, thin_foreground_image[..., i] == 1)] = 1
+        z_atlas_mask[np.logical_and(image[..., i] < back_threshold, thin_background_image[..., i] == 1)] = 2
+
+        markers[z_atlas_mask == 1] = 1
+        markers[z_atlas_mask == 2] = 2
+        markers[l_pFus_mask == False] = -1
+        skeletonize_markers_rw[..., i] = markers
+
+
+        rw_labels = random_walker(image[..., i], markers, beta=10, mode='bf')
+        rw_labels[rw_labels == -1] = 0
+        skeletonize_rw[rw_labels == 1, i] = 4
+
+        #r_pFus
+        markers = np.zeros_like(image[..., i])
+        z_atlas_mask = np.zeros_like(image[..., i])
+
+        fore_image = image[np.logical_and(r_pFus_mask, thin_foreground_image[..., i] == 1), i]
+        fore_threshold = -np.sort(-fore_image)[30]
+
+        back_image = image[np.logical_and(r_pFus_mask, thin_background_image[..., i] == 1), i]
+        back_threshold = np.sort(back_image)[180]
+
+        z_atlas_mask[np.logical_and(image[..., i] > fore_threshold, thin_foreground_image[..., i] == 1)] = 1
+        z_atlas_mask[np.logical_and(image[..., i] < back_threshold, thin_background_image[..., i] == 1)] = 2
+
+        markers[z_atlas_mask == 1] = 1
+        markers[z_atlas_mask == 2] = 2
+        markers[r_pFus_mask == False] = -1
+        skeletonize_markers_rw[..., i] = markers
+
+
+        rw_labels = random_walker(image[..., i], markers, beta=10, mode='bf')
+        rw_labels[rw_labels == -1] = 0
+        skeletonize_rw[rw_labels == 1, i] = 3
+
+        print 'rw: ', i
+    nib.save(nib.Nifti1Image(skeletonize_rw, affine), ATLAS_TOP_DIR + 'all_sessions_r_OFA_skeletonize_test.nii.gz')
+    nib.save(nib.Nifti1Image(skeletonize_markers_rw, affine), ATLAS_TOP_DIR + 'all_sessions_r_OFA_markers_skeletonize_test.nii.gz')
 
 
 

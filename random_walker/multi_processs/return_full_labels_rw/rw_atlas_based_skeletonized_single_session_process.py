@@ -33,6 +33,9 @@ complete_atlas_data = nib.load(ATLAS_TOP_DIR + 'complete_atlas_label.nii.gz').ge
 left_barin_mask = nib.load(PROB_ROI_202_SUB_FILE + PROB_LEFT_BRAIN_FILE).get_data()
 right_barin_mask = nib.load(PROB_ROI_202_SUB_FILE + PROB_RIGHT_BRAIN_FILE).get_data()
 
+thin_background_image = nib.load(ATLAS_TOP_DIR + 'all_sessions_background_skeletonize.nii.gz').get_data()
+thin_foreground_image = nib.load(ATLAS_TOP_DIR + 'all_sessions_skeletonize.nii.gz').get_data()
+
 def dice(volume1, volume2):
     if volume1.shape != volume2.shape:
         raise ValueError("Shape mismatch: volume1 and volume2 must have the same shape.")
@@ -80,6 +83,10 @@ def process_single_subject(subject_index):
         temp_volume[right_barin_mask == 0] = 1000
         temp_volume[temp_volume > DEFAULT_BACKGROUND_THR] = 1000
         markers[temp_volume <= DEFAULT_BACKGROUND_THR] = 3 #background
+
+        markers[thin_foreground_image[..., subject_index] == 1] = 1
+        markers[thin_background_image[..., subject_index] == 1] = 2
+        markers[right_barin_mask == False] = -1
 
         z_atlas_mask = np.zeros_like(atlas_data)
         if (atlas_data == 1).sum() <= DEFAULT_Z_TOP :
