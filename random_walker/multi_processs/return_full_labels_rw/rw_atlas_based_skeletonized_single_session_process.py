@@ -20,7 +20,7 @@ OBJECT_MARKERS_NUM = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100] #len 10 default -
 # ATLAS_SELECTED = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140,150] #len 12 default - 30
 ATLAS_SELECTED = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100] #len 12 default - 30
 
-DEFAULT_TOP_RANK = 10 # 0 - 100, default
+DEFAULT_TOP_RANK = 50 # 0 - 100, default
 DEFAULT_Z_TOP = 60 #default 60
 DEFAULT_BACKGROUND_THR = -1 #default -1
 
@@ -46,7 +46,7 @@ l_OFA_group_mask = nib.load(LABEL_ROI_202_SUB_FILE + 'l_OFA_label.nii.gz').get_d
 r_pFus_group__mask = nib.load(LABEL_ROI_202_SUB_FILE + 'r_pFus_label.nii.gz').get_data() > 0
 l_pFus_group_mask = nib.load(LABEL_ROI_202_SUB_FILE + 'l_pFus_label.nii.gz').get_data() > 0
 
-DEFAULT_BACKGROUND_THR = 100
+DEFAULT_BACKGROUND_THR = 300
 
 def dice(volume1, volume2):
     if volume1.shape != volume2.shape:
@@ -96,11 +96,11 @@ def process_single_subject(subject_index):
         #--------------r_OFA---------------
         markers = np.zeros_like(image[..., subject_index])
         atlas_roi_mask = np.logical_and(atlas_data == 1, thin_foreground_image[..., subject_index] == 1)
-        if atlas_roi_mask.sum() < 0:
+        if atlas_roi_mask.sum() <= 0:
             atlas_roi_mask = np.logical_and(r_OFA_group_mask, thin_foreground_image[..., subject_index] == 1)
         # fore_image = image[atlas_roi_mask, subject_index]
         # fore_threshold = -np.sort(-fore_image)[30]
-        print 'subject index: ', subject_index, '   r_OFA size: ', atlas_roi_mask.sum()
+        print 'subject index: ', subject_index, 'atlas_index: ', atlas_index, '   r_OFA size: ', atlas_roi_mask.sum()
 
         back_image = image[np.logical_and(r_OFA_mask, thin_background_image[..., subject_index] == 1), subject_index]
         back_threshold = np.sort(back_image)[DEFAULT_BACKGROUND_THR]
@@ -117,11 +117,11 @@ def process_single_subject(subject_index):
         #--------------l_OFA-----------------
         markers = np.zeros_like(image[..., subject_index])
         atlas_roi_mask = np.logical_and(atlas_data == 2, thin_foreground_image[..., subject_index] == 1)
-        if atlas_roi_mask.sum() < 0:
+        if atlas_roi_mask.sum() <= 0:
             atlas_roi_mask = np.logical_and(l_OFA_group_mask, thin_foreground_image[..., subject_index] == 1)
         # fore_image = image[np.logical_and(atlas_data == 2, thin_foreground_image[..., subject_index] == 1), subject_index]
         # fore_threshold = -np.sort(-fore_image)[30]
-        print 'subject index: ', subject_index, '   l_OFA size: ', atlas_roi_mask.sum()
+        print 'subject index: ', subject_index, 'atlas_index: ', atlas_index, '   l_OFA size: ', atlas_roi_mask.sum()
 
         back_image = image[np.logical_and(l_OFA_mask, thin_background_image[..., subject_index] == 1), subject_index]
         back_threshold = np.sort(back_image)[DEFAULT_BACKGROUND_THR]
@@ -138,11 +138,11 @@ def process_single_subject(subject_index):
         #----------------r_pFus-----------------
         markers = np.zeros_like(image[..., subject_index])
         atlas_roi_mask = np.logical_and(atlas_data == 3, thin_foreground_image[..., subject_index] == 1)
-        if atlas_roi_mask.sum() < 0:
+        if atlas_roi_mask.sum() <= 0:
             atlas_roi_mask = np.logical_and(r_pFus_group__mask, thin_foreground_image[..., subject_index] == 1)
         # fore_image = image[np.logical_and(atlas_data == 3, thin_foreground_image[..., subject_index] == 1), subject_index]
         # fore_threshold = -np.sort(-fore_image)[30]
-        print 'subject index: ', subject_index, '   r_pFus size: ', atlas_roi_mask.sum()
+        print 'subject index: ', subject_index, 'atlas_index: ', atlas_index, '   r_pFus size: ', atlas_roi_mask.sum()
 
         back_image = image[np.logical_and(r_pFus_mask, thin_background_image[..., subject_index] == 1), subject_index]
         back_threshold = np.sort(back_image)[DEFAULT_BACKGROUND_THR]
@@ -159,12 +159,12 @@ def process_single_subject(subject_index):
         #-------------------l_pFus-------------------
         markers = np.zeros_like(image[..., subject_index])
         atlas_roi_mask = np.logical_and(atlas_data == 4, thin_foreground_image[..., subject_index] == 1)
-        if atlas_roi_mask.sum() < 0:
+        if atlas_roi_mask.sum() <= 0:
             atlas_roi_mask = np.logical_and(l_pFus_group_mask, thin_foreground_image[..., subject_index] == 1)
 
         # fore_image = image[np.logical_and(atlas_data == 4, thin_foreground_image[..., subject_index] == 1), subject_index]
         # fore_threshold = -np.sort(-fore_image)[30]
-        print 'subject index: ', subject_index, '   l_pFus size: ', atlas_roi_mask.sum()
+        print 'subject index: ', subject_index, 'atlas_index: ', atlas_index, ' l_pFus size: ', atlas_roi_mask.sum()
 
         back_image = image[np.logical_and(l_pFus_mask, thin_background_image[..., subject_index] == 1), subject_index]
         back_threshold = np.sort(back_image)[DEFAULT_BACKGROUND_THR]
@@ -181,7 +181,7 @@ def process_single_subject(subject_index):
     nib.save(nib.Nifti1Image(skeletonize_markers_RW, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
                                                                '_skeletonize_markers_rw.nii.gz')
     nib.save(nib.Nifti1Image(region_result_RW, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
-                                                              '_skeletonize_rwgions_rw.nii.gz')
+                                                              '_skeletonize_regions_rw.nii.gz')
 
     # print 'subject_index:', subject_index, '    atlas_index:', atlas_index
     print 'subject_index:', subject_index, 'atlas-based rw finished...'
@@ -236,7 +236,8 @@ if __name__ == "__main__":
 
     # for thr in BACKGROUND_MAKRERS_THR:
     # for thr in OBJECT_MARKERS_NUM:
-    for thr in ATLAS_SELECTED:
+    # for thr in ATLAS_SELECTED:
+    for thr in [DEFAULT_BACKGROUND_THR]:
 
         RW_AGGRAGATOR_RESULT_DATA_DIR = ORIGIN_RW_AGGRAGATOR_RESULT_DATA_DIR
         DIR_PREFIX = str(thr) + '/'
@@ -288,16 +289,16 @@ if __name__ == "__main__":
     print 'all_means: ', all_means
     print 'all_stds: ', all_stds
 
-    all_means = np.array(all_means)
-    all_stds = np.array(all_stds)
-
-    import matplotlib.pyplot as plt
-
-    plt.plot(OBJECT_MARKERS_NUM, all_means[:, 0].tolist(), '--ro')
-    plt.plot(OBJECT_MARKERS_NUM, all_means[:, 1].tolist(), '--go')
-    plt.plot(OBJECT_MARKERS_NUM, all_means[:, 2].tolist(), '--bo')
-    plt.plot(OBJECT_MARKERS_NUM, all_means[:, 3].tolist(), '--yo')
-    plt.show()
+    # all_means = np.array(all_means)
+    # all_stds = np.array(all_stds)
+    #
+    # import matplotlib.pyplot as plt
+    #
+    # plt.plot(OBJECT_MARKERS_NUM, all_means[:, 0].tolist(), '--ro')
+    # plt.plot(OBJECT_MARKERS_NUM, all_means[:, 1].tolist(), '--go')
+    # plt.plot(OBJECT_MARKERS_NUM, all_means[:, 2].tolist(), '--bo')
+    # plt.plot(OBJECT_MARKERS_NUM, all_means[:, 3].tolist(), '--yo')
+    # plt.show()
 
     endtime = datetime.datetime.now()
     print 'Time cost: ', (endtime - starttime)
