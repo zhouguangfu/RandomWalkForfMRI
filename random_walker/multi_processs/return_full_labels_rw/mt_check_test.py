@@ -30,8 +30,8 @@ if __name__ == "__main__":
             #if similarity != 1.0:
             #    print '--------------------Similarity: ', similarity, ' subject num:', line.rstrip('\r\n')
 
-            if (lzg_data.sum() - zgf_data.sum() ) > 10:
-                print '--------------------not equal! ', '	subject num:', line.rstrip('\r\n')
+            if (lzg_data.sum() - zgf_data.sum() ) > 5:
+                print line.rstrip('\r\n')
 
 
 

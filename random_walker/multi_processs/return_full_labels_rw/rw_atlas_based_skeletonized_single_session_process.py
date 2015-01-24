@@ -46,7 +46,7 @@ l_OFA_group_mask = nib.load(LABEL_ROI_202_SUB_FILE + 'l_OFA_label.nii.gz').get_d
 r_pFus_group__mask = nib.load(LABEL_ROI_202_SUB_FILE + 'r_pFus_label.nii.gz').get_data() > 0
 l_pFus_group_mask = nib.load(LABEL_ROI_202_SUB_FILE + 'l_pFus_label.nii.gz').get_data() > 0
 
-DEFAULT_BACKGROUND_THR = 300
+DEFAULT_BACKGROUND_THR = 200
 
 def dice(volume1, volume2):
     if volume1.shape != volume2.shape:
@@ -65,7 +65,13 @@ def atlas_based_aggragator(subject_index):
         temp = np.zeros_like(region_result_RW)
         temp[region_result_RW == (roi_index + 1)] = 1
         weighted_result.append(np.average(temp, axis=3, weights=weight))
-        nib.save(nib.Nifti1Image(weighted_result[roi_index], affine), RW_AGGRAGATOR_RESULT_DATA_DIR + ROI[roi_index] + str(subject_index) + '_aggragator.nii.gz')
+
+        if roi_index < len(ROI):
+            nib.save(nib.Nifti1Image(weighted_result[roi_index], affine), RW_AGGRAGATOR_RESULT_DATA_DIR +
+                                ROI[roi_index] + '_' + str(subject_index) + '_aggragator.nii.gz')
+        else:
+            nib.save(nib.Nifti1Image(weighted_result[roi_index], affine), RW_AGGRAGATOR_RESULT_DATA_DIR +
+                                'background_' + str(subject_index) + '_aggragator.nii.gz')
         print 'subject_index: ', subject_index, '   roi_index: ', roi_index
 
     return weighted_result
@@ -234,15 +240,16 @@ def process_single_subject(subject_index):
         markers[atlas_roi_mask] = 2
 
         back_image = image[np.logical_and(right_barin_mask, thin_background_image[..., subject_index] == 1), subject_index]
-        back_threshold = np.sort(back_image)[DEFAULT_BACKGROUND_THR]
+        # back_threshold = np.sort(back_image)[DEFAULT_BACKGROUND_THR]
 
-        markers[np.logical_and(image[..., subject_index] < back_threshold, thin_background_image[..., subject_index] == 1)] = 3
+        # markers[np.logical_and(image[..., subject_index] < back_threshold, thin_background_image[..., subject_index] == 1)] = 3
+        markers[thin_background_image[..., subject_index] == 1] = 3
         markers[right_barin_mask == False] = -1
         skeletonize_markers_RW[markers == 1, atlas_index] = 1
         skeletonize_markers_RW[markers == 2, atlas_index] = 3
         skeletonize_markers_RW[markers == 3, atlas_index] = 5
 
-        rw_labels = random_walker(image[..., subject_index], markers, beta=10, mode='bf')
+        rw_labels = random_walker(image[..., subject_index], markers, beta=50, mode='bf')
         rw_labels[rw_labels == -1] = 0
         region_result_RW[rw_labels == 1, atlas_index] = 1
         region_result_RW[rw_labels == 2, atlas_index] = 3
@@ -250,6 +257,8 @@ def process_single_subject(subject_index):
 
         #left brain process
         #-------------------l_OFA--------------------
+        markers = np.zeros_like(image[..., subject_index])
+
         atlas_roi_mask = np.logical_and(atlas_data == 2, thin_foreground_image[..., subject_index] == 1)
         if atlas_roi_mask.sum() <= 0:
             atlas_roi_mask = np.logical_and(l_OFA_group_mask, thin_foreground_image[..., subject_index] == 1)
@@ -259,7 +268,6 @@ def process_single_subject(subject_index):
         markers[atlas_roi_mask] = 1
 
         #-------------------l_pFus-------------------
-        markers = np.zeros_like(image[..., subject_index])
         atlas_roi_mask = np.logical_and(atlas_data == 4, thin_foreground_image[..., subject_index] == 1)
         if atlas_roi_mask.sum() <= 0:
             atlas_roi_mask = np.logical_and(l_pFus_group_mask, thin_foreground_image[..., subject_index] == 1)
@@ -270,15 +278,16 @@ def process_single_subject(subject_index):
         markers[atlas_roi_mask] = 2
 
         back_image = image[np.logical_and(left_barin_mask, thin_background_image[..., subject_index] == 1), subject_index]
-        back_threshold = np.sort(back_image)[DEFAULT_BACKGROUND_THR]
+        # back_threshold = np.sort(back_image)[DEFAULT_BACKGROUND_THR]
 
-        markers[np.logical_and(image[..., subject_index] < back_threshold, thin_background_image[..., subject_index] == 1)] = 3
+        # markers[np.logical_and(image[..., subject_index] < back_threshold, thin_background_image[..., subject_index] == 1)] = 3
+        markers[thin_background_image[..., subject_index] == 1] = 3
         markers[left_barin_mask == False] = -1
         skeletonize_markers_RW[markers == 1, atlas_index] = 2
         skeletonize_markers_RW[markers == 2, atlas_index] = 4
         skeletonize_markers_RW[markers == 3, atlas_index] = 5
 
-        rw_labels = random_walker(image[..., subject_index], markers, beta=10, mode='bf')
+        rw_labels = random_walker(image[..., subject_index], markers, beta=50, mode='bf')
         rw_labels[rw_labels == -1] = 0
         region_result_RW[rw_labels == 1, atlas_index] = 2
         region_result_RW[rw_labels == 2, atlas_index] = 4
@@ -344,7 +353,7 @@ if __name__ == "__main__":
     # for thr in BACKGROUND_MAKRERS_THR:
     # for thr in OBJECT_MARKERS_NUM:
     # for thr in ATLAS_SELECTED:
-    for thr in [DEFAULT_BACKGROUND_THR]:
+    for thr in [DEFAULT_TOP_RANK]:
 
         RW_AGGRAGATOR_RESULT_DATA_DIR = ORIGIN_RW_AGGRAGATOR_RESULT_DATA_DIR
         DIR_PREFIX = str(thr) + '/'
