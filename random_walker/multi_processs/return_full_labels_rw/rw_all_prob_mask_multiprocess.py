@@ -33,7 +33,7 @@ def process_single_subject(subject_image_marker):
     while region_result_RW.sum() <= REGION_SIZE_MAX:
         #random walker ---------------------------------------------------------------------------------------------
         markers = np.zeros_like(subject_image)
-        markers[np.logical_and(mask > 0, thin_background_image > 0)] = 1
+        markers[np.logical_and(mask > 0, thin_background_image[..., subject_index] > 0)] = 1
         markers[region_result_RW == 1] = 2 #forground
         rw_labels = random_walker(subject_image, markers, beta=10, mode='bf')
         region_result_RW[rw_labels == 2] = 1

@@ -12,7 +12,7 @@ from configs import *
 from analysis.inter_subject_bar import show_barchart
 from skimage.segmentation import random_walker
 
-SUBJECT_SESSION_INDEX = 0 #0, 1, 2, 3, ,4 ,5, 6, 7, 8, 9
+SUBJECT_SESSION_INDEX = 9 #0, 1, 2, 3, ,4 ,5, 6, 7, 8, 9
 SESSION_NUMBERS = 7
 
 BACKGROUND_MAKRERS_THR = [-3, -2, -1, 0, 1, 2, 3] #len 7 default - (-1)
@@ -64,136 +64,40 @@ def atlas_based_aggragator(subject_index):
     for roi_index in range(len(ROI) + 1):
         temp = np.zeros_like(region_result_RW)
         temp[region_result_RW == (roi_index + 1)] = 1
+
+        from scipy.stats import logistic
+
+        if roi_index == len(ROI):
+            for i in range(temp.shape[3]):
+                temp_data = temp[..., i].copy()
+                temp[temp_data == 1, i] = 1.0 - (image[temp_data == 1, subject_index] + np.abs(image[temp_data == 1, subject_index].min())) /\
+                            (np.abs(image[temp_data == 1, subject_index].min()) + np.abs(image[temp_data == 1, subject_index].max()))
+        else:
+            for i in range(temp.shape[3]):
+                temp_data = temp[..., i].copy()
+                temp[temp_data == 1, i] = (image[temp_data == 1, subject_index] + np.abs(image[temp_data == 1, subject_index].min())) /\
+                            (np.abs(image[temp_data == 1, subject_index].min()) + np.abs(image[temp_data == 1, subject_index].max()))
+
+        # if roi_index == len(ROI):
+        #     for i in range(temp.shape[3]):
+        #         temp_data = temp[..., i].copy()
+        #         temp[temp_data == 1, i] = logistic.cdf(0 - image[temp_data == 1, subject_index])
+        # else:
+        #     for i in range(temp.shape[3]):
+        #         temp_data = temp[..., i].copy()
+        #         temp[temp_data == 1, i] = logistic.cdf(image[temp_data == 1, subject_index])
+
         weighted_result.append(np.average(temp, axis=3, weights=weight))
 
-        if roi_index < len(ROI):
-            nib.save(nib.Nifti1Image(weighted_result[roi_index], affine), RW_AGGRAGATOR_RESULT_DATA_DIR +
-                                ROI[roi_index] + '_' + str(subject_index) + '_aggragator.nii.gz')
-        else:
-            nib.save(nib.Nifti1Image(weighted_result[roi_index], affine), RW_AGGRAGATOR_RESULT_DATA_DIR +
-                                'background_' + str(subject_index) + '_aggragator.nii.gz')
+        # if roi_index < len(ROI):
+        #     nib.save(nib.Nifti1Image(weighted_result[roi_index], affine), RW_AGGRAGATOR_RESULT_DATA_DIR +
+        #                         ROI[roi_index] + '_' + str(subject_index) + '_aggragator.nii.gz')
+        # else:
+        #     nib.save(nib.Nifti1Image(weighted_result[roi_index], affine), RW_AGGRAGATOR_RESULT_DATA_DIR +
+        #                         'background_' + str(subject_index) + '_aggragator.nii.gz')
         print 'subject_index: ', subject_index, '   roi_index: ', roi_index
 
     return weighted_result
-
-# def process_single_subject(subject_index):
-#     global image, complete_atlas_data, left_barin_mask, right_barin_mask
-#
-#     region_result_RW = np.zeros((complete_atlas_data.shape[0], complete_atlas_data.shape[1], complete_atlas_data.shape[2], DEFAULT_TOP_RANK))
-#     skeletonize_markers_RW = np.zeros((complete_atlas_data.shape[0], complete_atlas_data.shape[1], complete_atlas_data.shape[2], DEFAULT_TOP_RANK))
-#
-#     for atlas_index in range(DEFAULT_TOP_RANK):
-#         atlas_data = np.zeros_like(complete_atlas_data[..., 0])
-#
-#         r_OFA_indexs =  np.load(ATLAS_TOP_DIR + ROI[0] + '_' + str(subject_index) + '_top_sort.npy')
-#         l_OFA_indexs =  np.load(ATLAS_TOP_DIR + ROI[1] + '_' + str(subject_index) + '_top_sort.npy')
-#         r_pFus_indexs =  np.load(ATLAS_TOP_DIR + ROI[2] + '_' + str(subject_index) + '_top_sort.npy')
-#         l_pFus_indexs =  np.load(ATLAS_TOP_DIR + ROI[3] + '_' + str(subject_index) + '_top_sort.npy')
-#
-#         atlas_data[complete_atlas_data[..., r_OFA_indexs[atlas_index]] == 1] = 1
-#         atlas_data[complete_atlas_data[..., l_OFA_indexs[atlas_index]] == 2] = 2
-#         atlas_data[complete_atlas_data[..., r_pFus_indexs[atlas_index]] == 3] = 3
-#         atlas_data[complete_atlas_data[..., l_pFus_indexs[atlas_index]] == 4] = 4
-#
-#
-#         # markers[thin_foreground_image[..., i] == 1] = 1
-#         # markers[thin_background_image[..., i] == 1] = 2
-#         # markers[r_OFA_mask == False] = -1
-#
-#         #--------------r_OFA---------------
-#         markers = np.zeros_like(image[..., subject_index])
-#         atlas_roi_mask = np.logical_and(atlas_data == 1, thin_foreground_image[..., subject_index] == 1)
-#         if atlas_roi_mask.sum() <= 0:
-#             atlas_roi_mask = np.logical_and(r_OFA_group_mask, thin_foreground_image[..., subject_index] == 1)
-#             # fore_image = image[atlas_roi_mask, subject_index]
-#         # fore_threshold = -np.sort(-fore_image)[30]
-#         print 'subject index: ', subject_index, 'atlas_index: ', atlas_index, '   r_OFA size: ', atlas_roi_mask.sum()
-#
-#         back_image = image[np.logical_and(r_OFA_mask, thin_background_image[..., subject_index] == 1), subject_index]
-#         back_threshold = np.sort(back_image)[DEFAULT_BACKGROUND_THR]
-#
-#         markers[atlas_roi_mask] = 1
-#         markers[np.logical_and(image[..., subject_index] < back_threshold, thin_background_image[..., subject_index] == 1)] = 2
-#         markers[r_OFA_mask == False] = -1
-#         skeletonize_markers_RW[markers > 0, atlas_index] = 1
-#
-#         rw_labels = random_walker(image[..., subject_index], markers, beta=10, mode='bf')
-#         rw_labels[rw_labels == -1] = 0
-#         region_result_RW[rw_labels == 1, atlas_index] = 1
-#
-#         #--------------l_OFA-----------------
-#         markers = np.zeros_like(image[..., subject_index])
-#         atlas_roi_mask = np.logical_and(atlas_data == 2, thin_foreground_image[..., subject_index] == 1)
-#         if atlas_roi_mask.sum() <= 0:
-#             atlas_roi_mask = np.logical_and(l_OFA_group_mask, thin_foreground_image[..., subject_index] == 1)
-#             # fore_image = image[np.logical_and(atlas_data == 2, thin_foreground_image[..., subject_index] == 1), subject_index]
-#         # fore_threshold = -np.sort(-fore_image)[30]
-#         print 'subject index: ', subject_index, 'atlas_index: ', atlas_index, '   l_OFA size: ', atlas_roi_mask.sum()
-#
-#         back_image = image[np.logical_and(l_OFA_mask, thin_background_image[..., subject_index] == 1), subject_index]
-#         back_threshold = np.sort(back_image)[DEFAULT_BACKGROUND_THR]
-#
-#         markers[atlas_roi_mask] = 1
-#         markers[np.logical_and(image[..., subject_index] < back_threshold, thin_background_image[..., subject_index] == 1)] = 2
-#         markers[l_OFA_mask == False] = -1
-#         skeletonize_markers_RW[markers > 0, atlas_index] = 1
-#
-#         rw_labels = random_walker(image[..., subject_index], markers, beta=10, mode='bf')
-#         rw_labels[rw_labels == -1] = 0
-#         region_result_RW[rw_labels == 1, atlas_index] = 2
-#
-#         #----------------r_pFus-----------------
-#         markers = np.zeros_like(image[..., subject_index])
-#         atlas_roi_mask = np.logical_and(atlas_data == 3, thin_foreground_image[..., subject_index] == 1)
-#         if atlas_roi_mask.sum() <= 0:
-#             atlas_roi_mask = np.logical_and(r_pFus_group__mask, thin_foreground_image[..., subject_index] == 1)
-#             # fore_image = image[np.logical_and(atlas_data == 3, thin_foreground_image[..., subject_index] == 1), subject_index]
-#         # fore_threshold = -np.sort(-fore_image)[30]
-#         print 'subject index: ', subject_index, 'atlas_index: ', atlas_index, '   r_pFus size: ', atlas_roi_mask.sum()
-#
-#         back_image = image[np.logical_and(r_pFus_mask, thin_background_image[..., subject_index] == 1), subject_index]
-#         back_threshold = np.sort(back_image)[DEFAULT_BACKGROUND_THR]
-#
-#         markers[atlas_roi_mask] = 1
-#         markers[np.logical_and(image[..., subject_index] < back_threshold, thin_background_image[..., subject_index] == 1)] = 2
-#         markers[r_pFus_mask == False] = -1
-#         skeletonize_markers_RW[markers > 0, atlas_index] = 1
-#
-#         rw_labels = random_walker(image[..., subject_index], markers, beta=10, mode='bf')
-#         rw_labels[rw_labels == -1] = 0
-#         region_result_RW[rw_labels == 1, atlas_index] = 3
-#
-#         #-------------------l_pFus-------------------
-#         markers = np.zeros_like(image[..., subject_index])
-#         atlas_roi_mask = np.logical_and(atlas_data == 4, thin_foreground_image[..., subject_index] == 1)
-#         if atlas_roi_mask.sum() <= 0:
-#             atlas_roi_mask = np.logical_and(l_pFus_group_mask, thin_foreground_image[..., subject_index] == 1)
-#
-#         # fore_image = image[np.logical_and(atlas_data == 4, thin_foreground_image[..., subject_index] == 1), subject_index]
-#         # fore_threshold = -np.sort(-fore_image)[30]
-#         print 'subject index: ', subject_index, 'atlas_index: ', atlas_index, ' l_pFus size: ', atlas_roi_mask.sum()
-#
-#         back_image = image[np.logical_and(l_pFus_mask, thin_background_image[..., subject_index] == 1), subject_index]
-#         back_threshold = np.sort(back_image)[DEFAULT_BACKGROUND_THR]
-#
-#         markers[atlas_roi_mask] = 1
-#         markers[np.logical_and(image[..., subject_index] < back_threshold, thin_background_image[..., subject_index] == 1)] = 2
-#         markers[l_pFus_mask == False] = -1
-#         skeletonize_markers_RW[markers > 0, atlas_index] = 1
-#
-#         rw_labels = random_walker(image[..., subject_index], markers, beta=10, mode='bf')
-#         rw_labels[rw_labels == -1] = 0
-#         region_result_RW[rw_labels == 1, atlas_index] = 4
-#
-#     nib.save(nib.Nifti1Image(skeletonize_markers_RW, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
-#                                                               '_skeletonize_markers_rw.nii.gz')
-#     nib.save(nib.Nifti1Image(region_result_RW, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
-#                                                         '_skeletonize_regions_rw.nii.gz')
-#
-#     # print 'subject_index:', subject_index, '    atlas_index:', atlas_index
-#     print 'subject_index:', subject_index, 'atlas-based rw finished...'
-#
-#     return region_result_RW
 
 def process_single_subject(subject_index):
     global image, complete_atlas_data, left_barin_mask, right_barin_mask
@@ -249,7 +153,7 @@ def process_single_subject(subject_index):
         skeletonize_markers_RW[markers == 2, atlas_index] = 3
         skeletonize_markers_RW[markers == 3, atlas_index] = 5
 
-        rw_labels = random_walker(image[..., subject_index], markers, beta=50, mode='bf')
+        rw_labels = random_walker(image[..., subject_index], markers, beta=10, mode='bf')
         rw_labels[rw_labels == -1] = 0
         region_result_RW[rw_labels == 1, atlas_index] = 1
         region_result_RW[rw_labels == 2, atlas_index] = 3
@@ -274,7 +178,7 @@ def process_single_subject(subject_index):
 
         # fore_image = image[np.logical_and(atlas_data == 4, thin_foreground_image[..., subject_index] == 1), subject_index]
         # fore_threshold = -np.sort(-fore_image)[30]
-        print 'subject index: ', subject_index, 'atlas_index: ', atlas_index, ' l_pFus size: ', atlas_roi_mask.sum()
+        print 'subject index: ', subject_index, 'atlas_index: ', atlas_index, '   l_pFus size: ', atlas_roi_mask.sum()
         markers[atlas_roi_mask] = 2
 
         back_image = image[np.logical_and(left_barin_mask, thin_background_image[..., subject_index] == 1), subject_index]
@@ -287,17 +191,17 @@ def process_single_subject(subject_index):
         skeletonize_markers_RW[markers == 2, atlas_index] = 4
         skeletonize_markers_RW[markers == 3, atlas_index] = 5
 
-        rw_labels = random_walker(image[..., subject_index], markers, beta=50, mode='bf')
+        rw_labels = random_walker(image[..., subject_index], markers, beta=10, mode='bf')
         rw_labels[rw_labels == -1] = 0
         region_result_RW[rw_labels == 1, atlas_index] = 2
         region_result_RW[rw_labels == 2, atlas_index] = 4
         region_result_RW[rw_labels == 3, atlas_index] = 5
 
 
-    nib.save(nib.Nifti1Image(skeletonize_markers_RW, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
-                                                               '_skeletonize_markers_rw.nii.gz')
-    nib.save(nib.Nifti1Image(region_result_RW, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
-                                                              '_skeletonize_regions_rw.nii.gz')
+    # nib.save(nib.Nifti1Image(skeletonize_markers_RW, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
+    #                                                            '_skeletonize_markers_rw.nii.gz')
+    # nib.save(nib.Nifti1Image(region_result_RW, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
+    #                                                           '_skeletonize_regions_rw.nii.gz')
 
     # print 'subject_index:', subject_index, '    atlas_index:', atlas_index
     print 'subject_index:', subject_index, 'atlas-based rw finished...'
@@ -353,7 +257,7 @@ if __name__ == "__main__":
     # for thr in BACKGROUND_MAKRERS_THR:
     # for thr in OBJECT_MARKERS_NUM:
     # for thr in ATLAS_SELECTED:
-    for thr in [DEFAULT_TOP_RANK]:
+    for thr in ATLAS_SELECTED:
 
         RW_AGGRAGATOR_RESULT_DATA_DIR = ORIGIN_RW_AGGRAGATOR_RESULT_DATA_DIR
         DIR_PREFIX = str(thr) + '/'
