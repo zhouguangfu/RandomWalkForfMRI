@@ -10,7 +10,7 @@ image = nib.load(ACTIVATION_DATA_DIR)
 affine = image.get_affine()
 image = image.get_data()
 
-DEFAULT_TOP_RANK = 50
+DEFAULT_TOP_RANK = 30
 SESSION_NUMBERS = 7
 
 # def connect_results():

@@ -15,23 +15,29 @@ if __name__ == "__main__":
             subject_zstat_path = '/nfs/t2/BAA/SSR/' + line.rstrip('\r\n') + '/mt/motion/'
             # print 'Subject zstat path: ', subject_zstat_path
 
-            if  not os.path.exists(subject_zstat_path + 'lzg_mt_z5.0.nii.gz'):
-                print '--------------------lzg_mt_z5.0.nii.gz not found.', ' subject num:', line.rstrip('\r\n')
-                continue
+            if  not os.path.exists(subject_zstat_path + 'mt_z5.0_ff.nii.gz'):
+                print 'Rename to mt_z5.0_ff.nii.gz.', ' subject num:', line.rstrip('\r\n')
+                image = nib.load(subject_zstat_path + 'zgf_mt_z5.0.nii.gz')
+                affine = image.get_affine()
+                data = image.get_data()
+                nib.save(nib.Nifti1Image(data, affine), subject_zstat_path + 'mt_z5.0_ff.nii.gz')
+            else:
+                print subject_zstat_path + 'mt_z5.0_ff.nii.gz', ' subject num:', line.rstrip('\r\n')
 
-            if  not os.path.exists(subject_zstat_path + 'zgf_mt_z5.0.nii.gz'):
-                print '--------------------zgf_mt_z5.0.nii.gz not found.', ' subject num:', line.rstrip('\r\n')
-                continue
 
-            lzg_data = nib.load(subject_zstat_path + 'lzg_mt_z5.0.nii.gz').get_data()
-            zgf_data = nib.load(subject_zstat_path + 'zgf_mt_z5.0.nii.gz').get_data()
+            # if  not os.path.exists(subject_zstat_path + 'zgf_mt_z5.0.nii.gz'):
+            #     print '--------------------zgf_mt_z5.0.nii.gz not found.', ' subject num:', line.rstrip('\r\n')
+            #     continue
 
-            #similarity = np.corrcoef(lzg_data[whole_brain_mask > 0], zgf_data[whole_brain_mask > 0])[0, 1]
-            #if similarity != 1.0:
-            #    print '--------------------Similarity: ', similarity, ' subject num:', line.rstrip('\r\n')
-
-            if (lzg_data.sum() - zgf_data.sum() ) > 5:
-                print line.rstrip('\r\n')
+            # lzg_data = nib.load(subject_zstat_path + 'lzg_mt_z5.0.nii.gz').get_data()
+            # zgf_data = nib.load(subject_zstat_path + 'zgf_mt_z5.0.nii.gz').get_data()
+            #
+            # #similarity = np.corrcoef(lzg_data[whole_brain_mask > 0], zgf_data[whole_brain_mask > 0])[0, 1]
+            # #if similarity != 1.0:
+            # #    print '--------------------Similarity: ', similarity, ' subject num:', line.rstrip('\r\n')
+            #
+            # if (lzg_data.sum() - zgf_data.sum() ) > 5:
+            #     print line.rstrip('\r\n')
 
 
 

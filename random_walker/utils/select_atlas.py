@@ -34,11 +34,14 @@ def generate_atlas_top_index(all_image_data):
             writer = csv.writer(file(ATLAS_TOP_DIR + ROI[roi_index] + '_' + str(i) + '_top_sort.csv', 'wb'))
             writer.writerow(['index', 'similarity'])
 
-            vector1 = image[roi_mask_list[roi_index], i]
+            vector1 = image[roi_mask_list[roi_index], i] > 2.3
             simility_vals = np.zeros((all_image_data.shape[3]))
             for j in range(all_image_data.shape[3]):
-                vector2 = all_image_data[roi_mask_list[roi_index], j]
-                simility_vals[j] = np.corrcoef(vector1, vector2)[0, 1]
+                vector2 = all_image_data[roi_mask_list[roi_index], j] > 2.3
+                inter_mask = np.logical_or(vector1, vector2)
+
+                print 'inter_mask.sum(): ', inter_mask.sum()
+                simility_vals[j] = np.corrcoef(vector1[inter_mask], vector2[inter_mask])[0, 1]
                 # print 'i: ', i, '   roi_index: ', roi_index, ' j: ', j
 
             index = np.argsort(-simility_vals)
