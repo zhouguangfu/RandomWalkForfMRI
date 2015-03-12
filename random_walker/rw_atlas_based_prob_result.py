@@ -7,6 +7,7 @@ import numpy as np
 import nibabel as nib
 from skimage.segmentation import random_walker
 from scipy.ndimage import morphology
+from configs import *
 
 SUBJECT_NUM = 70
 ATLAS_NUM = 202
