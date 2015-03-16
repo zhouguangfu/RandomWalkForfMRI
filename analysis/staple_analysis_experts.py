@@ -55,12 +55,17 @@ for i in range(len(SUBJECT_NAMES)):
     os.popen(crlIndexOfMaxComponent + ' ' + experts_path + 'weights.nii ' + experts_path + 'maxinum_component.nii')
 
     experts_dice_file = open(experts_path + 'dice.txt', 'w+')
+
     for index in range(SESSION_NUM):
         for roi_index in range(len(ROI)):
-            experts_dice_output = os.popen(crlOverlapstats3d + ' ' + experts_path + str(i * SESSION_NUM + index) + '.nii '
+            experts_dice_output = os.popen(crlOverlapstats3d + ' ' + zgf_path + str(i * SESSION_NUM + index) + '.nii '
                                            + experts_path + 'maxinum_component.nii' + ' ' + str(roi_index + 1))
             experts_dice_file.write(experts_dice_output.read())
-            print 'index: ', index, '   roi_index: ', roi_index
+    for index in range(SESSION_NUM):
+        for roi_index in range(len(ROI)):
+            experts_dice_output = os.popen(crlOverlapstats3d + ' ' + lzg_path + str(i * SESSION_NUM + index) + '.nii '
+                                           + experts_path + 'maxinum_component.nii' + ' ' + str(roi_index + 1))
+            experts_dice_file.write(experts_dice_output.read())
     experts_dice_file.close()
 
 
