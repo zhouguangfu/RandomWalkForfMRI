@@ -65,10 +65,10 @@ for i in range(len(SUBJECT_NAMES)):
 
     manuanl_dice_file = open(manual_path + 'dice.txt', 'w+')
     for index in range(SESSION_NUM):
-        manuanl_dice_file.write('#------------'+ str(index) + '------------')
+        # manuanl_dice_file.write('#------------'+ str(index) + '------------')
         for roi_index in range(len(ROI)):
-            manuanl_dice_output = os.popen(crlOverlapstats3d + ' ' + manual_path + str(index) + '.nii '
-                                  + manual_path + 'maxinum_component.nii' + ' ' + str(roi_index + 1))
+            manuanl_dice_output = os.popen(crlOverlapstats3d + ' ' + manual_path + str(i * SESSION_NUM + index) + '.nii '
+                                           + manual_path + 'maxinum_component.nii' + ' ' + str(roi_index + 1))
             manuanl_dice_file.write(manuanl_dice_output.read())
     manuanl_dice_file.close()
 
@@ -81,10 +81,10 @@ for i in range(len(SUBJECT_NAMES)):
 
     rw_dice_file = open(rw_path + 'dice.txt', 'w+')
     for index in range(SESSION_NUM):
-        rw_dice_file.write('#------------'+ str(index) + '------------')
+        # rw_dice_file.write('#------------'+ str(index) + '------------')
         for roi_index in range(len(ROI)):
-            rw_dice_output = os.popen(crlOverlapstats3d + ' ' + rw_path + str(index) + '.nii '
-                             + rw_path + 'maxinum_component.nii' + ' ' + str(roi_index + 1))
+            rw_dice_output = os.popen(crlOverlapstats3d + ' ' + rw_path + str(i * SESSION_NUM + index) + '.nii '
+                                      + rw_path + 'maxinum_component.nii' + ' ' + str(roi_index + 1))
             rw_dice_file.write(rw_dice_output.read())
     rw_dice_file.close()
 
