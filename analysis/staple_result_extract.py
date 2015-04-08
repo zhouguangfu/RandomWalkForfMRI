@@ -33,9 +33,9 @@ if __name__ == "__main__":
         print '---------------------------------------', i ,'--------------------------------------------'
     print '-----------------------all-------------------------'
     print np.round(np.mean(all_maunal_dice_array, axis=0), 3)
-    print np.round(np.mean(rw_dice_array, axis=0), 3)
+    print np.round(np.mean(all_rw_dice_array, axis=0), 3)
     print 'manual: ', np.round(np.std(all_maunal_dice_array, axis=0), 3) / np.round(np.mean(all_maunal_dice_array, axis=0), 3)
-    print 'rw: ', np.round(np.std(rw_dice_array, axis=0), 3) / np.round(np.mean(rw_dice_array, axis=0), 3)
+    print 'rw: ', np.round(np.std(all_rw_dice_array, axis=0), 3) / np.round(np.mean(all_rw_dice_array, axis=0), 3)
 
 
 
