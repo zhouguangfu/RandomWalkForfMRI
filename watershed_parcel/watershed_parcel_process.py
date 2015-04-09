@@ -109,6 +109,7 @@ def select_optimal_parcel_min_distance(subject_index, size=None):
     nib.save(nib.Nifti1Image(atlas_data, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
                                                   '_watershed_top_one_atlas.nii.gz')
 
+    #generate the marker
     mean_OFA_FFA_distance = compute_OFA_FFA_mean_prob_peak_distance()
     #r_OFA
     r_OFA_optimal_label_cord = image_peaks[r_OFA_distances.argmin()]
@@ -241,44 +242,8 @@ def select_optimal_parcel_max_region_mean(subject_index, size=None):
     nib.save(nib.Nifti1Image(atlas_data, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
                                                   '_watershed_top_one_atlas.nii.gz')
 
-    mean_OFA_FFA_distance = compute_OFA_FFA_mean_prob_peak_distance() / 2.0
-
-    #r_OFA
-    r_OFA_distances_argsort = r_OFA_distances.argsort()
-    r_OFA_max_region_mean_index = 0
-    r_OFA_max_region_mean_value = -10000
-    for i in range((r_OFA_distances <= mean_OFA_FFA_distance).sum()):
-        r_OFA_cord = image_peaks[r_OFA_distances_argsort[i]]
-        r_OFA_label_value = watershed_volume[r_OFA_cord[0],
-                                             r_OFA_cord[1],
-                                             r_OFA_cord[2]]
-        region_mean = image[watershed_volume == r_OFA_label_value, subject_index].mean()
-        if r_OFA_max_region_mean_value < region_mean:
-            r_OFA_max_region_mean_index = r_OFA_distances_argsort[i]
-            r_OFA_optimal_label_value = r_OFA_label_value
-            r_OFA_max_region_mean_value = region_mean
-
-    if r_OFA_optimal_label_value == 0:
-        print '!!!!!!!!!!!r_OFA_distances = 0 error!'
-
-    #l_OFA
-    l_OFA_distances_argsort = l_OFA_distances.argsort()
-    l_OFA_max_region_mean_index = 0
-    l_OFA_max_region_mean_value = -10000
-    for i in range((l_OFA_distances <= mean_OFA_FFA_distance).sum()):
-        l_OFA_cord = image_peaks[l_OFA_distances_argsort[i]]
-        l_OFA_label_value = watershed_volume[l_OFA_cord[0],
-                                             l_OFA_cord[1],
-                                             l_OFA_cord[2]]
-        region_mean = image[watershed_volume == l_OFA_label_value, subject_index].mean()
-        if l_OFA_max_region_mean_value < region_mean:
-            l_OFA_max_region_mean_index = l_OFA_distances_argsort[i]
-            l_OFA_optimal_label_value = l_OFA_label_value
-            l_OFA_max_region_mean_value = region_mean
-
-    if l_OFA_optimal_label_value == 0:
-        print '!!!!!!!!!!!l_OFA_distances = 0 error!'
-
+    #generate the marker
+    mean_OFA_FFA_distance = compute_OFA_FFA_mean_prob_peak_distance()
     #r_pFus
     r_pFus_distances_argsort = r_pFus_distances.argsort()
     r_pFus_max_region_mean_index = 0
@@ -314,6 +279,45 @@ def select_optimal_parcel_max_region_mean(subject_index, size=None):
 
     if l_pFus_optimal_label_value == 0:
         print '!!!!!!!!!!!l_pFus_distances = 0 error!'
+
+    #r_OFA
+    r_OFA_distances_argsort = r_OFA_distances.argsort()
+    r_OFA_max_region_mean_index = 0
+    r_OFA_max_region_mean_value = -10000
+    for i in range((r_OFA_distances <= mean_OFA_FFA_distance).sum()):
+        r_OFA_cord = image_peaks[r_OFA_distances_argsort[i]]
+        r_OFA_label_value = watershed_volume[r_OFA_cord[0],
+                                             r_OFA_cord[1],
+                                             r_OFA_cord[2]]
+        region_mean = image[watershed_volume == r_OFA_label_value, subject_index].mean()
+        if r_OFA_max_region_mean_value < region_mean:
+            if r_OFA_label_value != r_pFus_optimal_label_value:
+                r_OFA_max_region_mean_index = r_OFA_distances_argsort[i]
+                r_OFA_optimal_label_value = r_OFA_label_value
+                r_OFA_max_region_mean_value = region_mean
+
+    if r_OFA_optimal_label_value == 0:
+        print '!!!!!!!!!!!r_OFA_distances = 0 error!'
+
+    #l_OFA
+    l_OFA_distances_argsort = l_OFA_distances.argsort()
+    l_OFA_max_region_mean_index = 0
+    l_OFA_max_region_mean_value = -10000
+    for i in range((l_OFA_distances <= mean_OFA_FFA_distance).sum()):
+        l_OFA_cord = image_peaks[l_OFA_distances_argsort[i]]
+        l_OFA_label_value = watershed_volume[l_OFA_cord[0],
+                                             l_OFA_cord[1],
+                                             l_OFA_cord[2]]
+        region_mean = image[watershed_volume == l_OFA_label_value, subject_index].mean()
+        if l_OFA_max_region_mean_value < region_mean:
+            if l_OFA_label_value != l_pFus_optimal_label_value:
+                l_OFA_max_region_mean_index = l_OFA_distances_argsort[i]
+                l_OFA_optimal_label_value = l_OFA_label_value
+                l_OFA_max_region_mean_value = region_mean
+
+    if l_OFA_optimal_label_value == 0:
+        print '!!!!!!!!!!!l_OFA_distances = 0 error!'
+
 
     #print
     print '------------------------------------------'
