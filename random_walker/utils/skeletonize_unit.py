@@ -3,10 +3,8 @@ __author__ = 'zhouguangfu'
 import datetime
 import numpy as np
 import nibabel as nib
-import csv
 
 from configs import *
-from skimage import morphology
 from skimage.segmentation import random_walker
 
 #global varibale

@@ -3,7 +3,6 @@ __author__ = 'zhouguangfu'
 import datetime
 import numpy as np
 import nibabel as nib
-import csv
 
 from configs import *
 
@@ -20,7 +19,7 @@ complete_atlas_data = nib.load(ATLAS_TOP_DIR + 'complete_atlas_label.nii.gz').ge
 def process_single_subject(subject_index):
     global image, complete_atlas_data, left_barin_mask, right_barin_mask
 
-    indexs =  np.load(ATLAS_TOP_DIR + str(subject_index) + '_top_sort.npy')
+    indexs =  np.load(ATLAS_TOP_DIR + "\old_threshold_0/" + str(subject_index) + '_top_sort.npy')
     region_result_RW = np.zeros((complete_atlas_data.shape[0], complete_atlas_data.shape[1], complete_atlas_data.shape[2], TOP_RANK))
 
     for atlas_index in range(TOP_RANK):

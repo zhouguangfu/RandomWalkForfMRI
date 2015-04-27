@@ -10,9 +10,10 @@ from random_walker.multi_processs.marker_test.imtool import *
 from configs import *
 from skimage.segmentation import random_walker
 
-DEFAULT_TOP_RANK = 10
-WATERSHED_THRESHOLD = 0
-SUBJECT_NUM = 14
+DEFAULT_TOP_RANK = 30
+WATERSHED_THRESHOLD = 2.0
+SUBJECT_NUM = 7
+REGION_SIZE = 300
 
 #global varibale
 image = nib.load(ACTIVATION_DATA_DIR)
@@ -20,6 +21,8 @@ affine = image.get_affine()
 image = image.get_data()
 
 complete_atlas_data = nib.load(ATLAS_TOP_DIR + 'complete_atlas_label.nii.gz').get_data()
+complete_image_data = nib.load(ALL_202_SUBJECTS_DATA_DIR).get_data()
+
 left_barin_mask = nib.load(PROB_ROI_202_SUB_FILE + PROB_LEFT_BRAIN_FILE).get_data()
 right_barin_mask = nib.load(PROB_ROI_202_SUB_FILE + PROB_RIGHT_BRAIN_FILE).get_data()
 
@@ -90,7 +93,6 @@ def select_optimal_parcel_min_distance(subject_index, size=None):
     #get the atlas data
     atlas_data = np.zeros_like(complete_atlas_data[..., subject_index])
     top_atlas_data = np.load(ATLAS_TOP_DIR + 'old_threshold_0/' + str(subject_index) + '_top_sort.npy')
-    region_results_RW = np.zeros((image.shape[0], image.shape[1], image.shape[2], DEFAULT_TOP_RANK))
     region_results_RW = np.zeros((image.shape[0], image.shape[1], image.shape[2], DEFAULT_TOP_RANK))
     marker_results_RW = np.zeros((image.shape[0], image.shape[1], image.shape[2], DEFAULT_TOP_RANK))
     watershed_results_RW = np.zeros((image.shape[0], image.shape[1], image.shape[2], DEFAULT_TOP_RANK))
@@ -237,6 +239,7 @@ def select_optimal_parcel_max_region_mean(subject_index, size=None):
     marker_results_RW = np.zeros((image.shape[0], image.shape[1], image.shape[2], DEFAULT_TOP_RANK))
     watershed_results_RW = np.zeros((image.shape[0], image.shape[1], image.shape[2], DEFAULT_TOP_RANK))
     watershed_top_one_atlas_results_RW = np.zeros((image.shape[0], image.shape[1], image.shape[2], DEFAULT_TOP_RANK))
+    top_atlas_image_RW = np.zeros((image.shape[0], image.shape[1], image.shape[2], DEFAULT_TOP_RANK))
 
     mean_OFA_FFA_distance = compute_OFA_FFA_mean_prob_peak_distance()
 
@@ -246,6 +249,7 @@ def select_optimal_parcel_max_region_mean(subject_index, size=None):
         atlas_data[complete_atlas_data[..., top_atlas_data[atlas_index]] == 3] = 3
         atlas_data[complete_atlas_data[..., top_atlas_data[atlas_index]] == 4] = 4
         watershed_top_one_atlas_results_RW[..., atlas_index] = atlas_data
+        top_atlas_image_RW[..., atlas_index] = complete_image_data[..., top_atlas_data[atlas_index]]
         #get peaks
         atlas_label_peaks = compute_label_peak(atlas_data, subject_index)
         image_peaks = compute_parcel_peak(subject_index)
@@ -266,6 +270,8 @@ def select_optimal_parcel_max_region_mean(subject_index, size=None):
         r_pFus_optimal_label_value = -1
         for i in range((r_pFus_distances <= mean_OFA_FFA_distance).sum()):
             r_pFus_cord = image_peaks[r_pFus_distances_argsort[i]]
+            if r_pFus_mask[r_pFus_cord[0], r_pFus_cord[1], r_pFus_cord[2]] == 0:
+                continue
             r_pFus_label_value = watershed_volume[r_pFus_cord[0],
                                                   r_pFus_cord[1],
                                                   r_pFus_cord[2]]
@@ -285,6 +291,8 @@ def select_optimal_parcel_max_region_mean(subject_index, size=None):
         l_pFus_optimal_label_value = -1
         for i in range((l_pFus_distances <= mean_OFA_FFA_distance).sum()):
             l_pFus_cord = image_peaks[l_pFus_distances_argsort[i]]
+            if l_pFus_mask[l_pFus_cord[0], l_pFus_cord[1], l_pFus_cord[2]] == 0:
+                continue
             l_pFus_label_value = watershed_volume[l_pFus_cord[0],
                                                   l_pFus_cord[1],
                                                   l_pFus_cord[2]]
@@ -304,6 +312,8 @@ def select_optimal_parcel_max_region_mean(subject_index, size=None):
         r_OFA_optimal_label_value = -1
         for i in range((r_OFA_distances <= mean_OFA_FFA_distance).sum()):
             r_OFA_cord = image_peaks[r_OFA_distances_argsort[i]]
+            if r_OFA_mask[r_OFA_cord[0], r_OFA_cord[1], r_OFA_cord[2]] == 0:
+                continue
             r_OFA_label_value = watershed_volume[r_OFA_cord[0],
                                                  r_OFA_cord[1],
                                                  r_OFA_cord[2]]
@@ -324,6 +334,8 @@ def select_optimal_parcel_max_region_mean(subject_index, size=None):
         l_OFA_optimal_label_value = -1
         for i in range((l_OFA_distances <= mean_OFA_FFA_distance).sum()):
             l_OFA_cord = image_peaks[l_OFA_distances_argsort[i]]
+            if l_OFA_mask[l_OFA_cord[0], l_OFA_cord[1], l_OFA_cord[2]] == 0:
+                continue
             l_OFA_label_value = watershed_volume[l_OFA_cord[0],
                                                  l_OFA_cord[1],
                                                  l_OFA_cord[2]]
@@ -376,11 +388,22 @@ def select_optimal_parcel_max_region_mean(subject_index, size=None):
         skeletonize_markers_RW[markers == 2] = 3
         skeletonize_markers_RW[markers == 3] = 5
 
-        # rw_labels = random_walker(image[..., subject_index], markers, beta=10, mode='bf')
-        # rw_labels[rw_labels == -1] = 0
-        # region_result_RW[rw_labels == 1] = 1
-        # region_result_RW[rw_labels == 2] = 3
-        # region_result_RW[rw_labels == 3] = 5
+        rw_labels = random_walker(image[..., subject_index], markers, beta=10, mode='bf')
+        rw_labels[rw_labels == -1] = 0
+
+        if (markers == 1).sum() == 0 and (markers == 3).sum() == 0:
+            # raise ValueError("atlas_index: " + atlas_index + " r_OFA and r_FFA missing!")
+            print "atlas_index: " + str(atlas_index) + " r_OFA and r_FFA missing!"
+        elif (markers == 1).sum() == 0:
+            region_result_RW[rw_labels == 1] = 3
+            region_result_RW[rw_labels == 2] = 5
+        elif (markers == 3).sum() == 0:
+            region_result_RW[rw_labels == 1] = 1
+            region_result_RW[rw_labels == 2] = 5
+        else:
+            region_result_RW[rw_labels == 1] = 1
+            region_result_RW[rw_labels == 2] = 3
+            region_result_RW[rw_labels == 3] = 5
 
         #left brain process
         markers = np.zeros_like(image[..., subject_index])
@@ -393,11 +416,22 @@ def select_optimal_parcel_max_region_mean(subject_index, size=None):
         skeletonize_markers_RW[markers == 2] = 4
         skeletonize_markers_RW[markers == 3] = 5
 
-        # rw_labels = random_walker(image[..., subject_index], markers, beta=10, mode='bf')
-        # rw_labels[rw_labels == -1] = 0
-        # region_result_RW[rw_labels == 1] = 2
-        # region_result_RW[rw_labels == 2] = 4
-        # region_result_RW[rw_labels == 3] = 5
+        rw_labels = random_walker(image[..., subject_index], markers, beta=10, mode='bf')
+        rw_labels[rw_labels == -1] = 0
+
+        if (markers == 2).sum() == 0 and (markers == 4).sum() == 0:
+            # raise ValueError("atlas_index: " + atlas_index + " l_OFA and l_FFA missing!")
+            print "atlas_index: " + str(atlas_index) + " l_OFA and l_FFA missing!"
+        elif (markers == 1).sum() == 0:
+            region_result_RW[rw_labels == 1] = 4
+            region_result_RW[rw_labels == 2] = 5
+        elif (markers == 2).sum() == 0:
+            region_result_RW[rw_labels == 1] = 2
+            region_result_RW[rw_labels == 2] = 5
+        else:
+            region_result_RW[rw_labels == 1] = 2
+            region_result_RW[rw_labels == 2] = 4
+            region_result_RW[rw_labels == 3] = 5
 
         region_results_RW[..., atlas_index] = region_result_RW
         marker_results_RW[..., atlas_index] = skeletonize_markers_RW
@@ -411,9 +445,12 @@ def select_optimal_parcel_max_region_mean(subject_index, size=None):
     nib.save(nib.Nifti1Image(watershed_results_RW, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
                                   '_watershed.nii.gz')
     nib.save(nib.Nifti1Image(watershed_top_one_atlas_results_RW, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
-                                  '_watershed_top_one_atlas.nii.gz')
-    marker_results_RW[marker_results_RW == 5] = 0
-    return marker_results_RW
+                                  '_top_atlas.nii.gz')
+    nib.save(nib.Nifti1Image(top_atlas_image_RW, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
+                                                                          '_top_atlas_image.nii.gz')
+
+    region_results_RW[region_results_RW == 5] = 0
+    return region_results_RW
 
 def atlas_based_aggragator(subject_index):
     region_results_RW = select_optimal_parcel_max_region_mean(subject_index)
