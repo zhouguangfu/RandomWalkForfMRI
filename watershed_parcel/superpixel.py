@@ -2,11 +2,19 @@ __author__ = 'zgf'
 
 import matplotlib.pyplot as plt
 import numpy as np
+import nibabel as nib
+from configs import *
 
 from skimage.data import lena
 from skimage.segmentation import felzenszwalb, slic, quickshift
 from skimage.segmentation import mark_boundaries
 from skimage.util import img_as_float
+
+r_OFA_mask = nib.load(PROB_ROI_202_SUB_FILE + 'r_OFA_prob.nii.gz').get_data() > 0
+l_OFA_mask = nib.load(PROB_ROI_202_SUB_FILE + 'l_OFA_prob.nii.gz').get_data() > 0
+r_pFus_mask = nib.load(PROB_ROI_202_SUB_FILE + 'r_pFus_prob.nii.gz').get_data() > 0
+l_pFus_mask = nib.load(PROB_ROI_202_SUB_FILE + 'l_pFus_prob.nii.gz').get_data() > 0
+
 
 
 # img = img_as_float(lena()[::2, ::2])
@@ -44,7 +52,7 @@ def compute_parcel_peak(subject_index):
     slic_image = slic(gray_image,
                       n_segments=5000,
                       compactness=10,
-                      sigma=5,
+                      sigma=0.2,
                       multichannel =False,
                       enforce_connectivity=True)
     nib.save(nib.Nifti1Image(slic_image, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(0) + '_' + str(supervoxel)+ '_test_supervoxel.nii.gz')
@@ -70,34 +78,41 @@ image = nib.load(ACTIVATION_DATA_DIR)
 affine = image.get_affine()
 image = image.get_data()
 
-subject_num = 3
-supervoxel = 10000
+subject_num = 70
+supervoxel = 5000
 supervoxel_image = np.zeros((image.shape[0], image.shape[1], image.shape[2], subject_num))
 
-compute_parcel_peak(0)
+# compute_parcel_peak(0)
 
+whole_rois_mask = np.zeros_like(supervoxel_image[..., 0])
+whole_rois_mask[r_pFus_mask > 0] = 1
+whole_rois_mask[r_OFA_mask > 0] = 1
+whole_rois_mask[l_pFus_mask > 0] = 1
+whole_rois_mask[l_OFA_mask > 0] = 1
 
-# for i in range(subject_num):
-#     frame = image[..., i]
-#     gray_image = (frame - frame.min()) * 255 / (frame.max() - frame.min())
-#
-#     supervoxel_image[..., i] = slic(gray_image,
-#                                     n_segments=supervoxel,
-#                                     compactness=10,
-#                                     sigma=5,
-#                                     multichannel =False,
-#                                     enforce_connectivity=True)
-#
-#     # supervoxel_image[..., i] = slic(gray_image,
-#     #                                 n_segments=supervoxel,
-#     #                                 slic_zero=True,
-#     #                                 sigma=1,
-#     #                                 multichannel =False,
-#     #                                 enforce_connectivity=True)
-#
-#     print "Subject_index: ",i,  "   supervoxel: ", supervoxel
-#     print "Slic number of segments: ",  len(np.unique(supervoxel_image[..., i]))
-# nib.save(nib.Nifti1Image(supervoxel_image, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(0) + '_' + str(supervoxel)+ '_supervoxel.nii.gz')
+for i in range(subject_num):
+    frame = image[..., i]
+    gray_image = (frame - frame.min()) * 255 / (frame.max() - frame.min())
+
+    supervoxel_image[..., i] = slic(gray_image,
+                                    n_segments=supervoxel,
+                                    compactness=10,
+                                    sigma=2,
+                                    multichannel =False,
+                                    enforce_connectivity=True)
+
+    # supervoxel_image[..., i] = slic(gray_image,
+    #                                 n_segments=supervoxel,
+    #                                 slic_zero=True,
+    #                                 sigma=1,
+    #                                 multichannel =False,
+    #                                 enforce_connectivity=True)
+
+    print "Subject_index: ",i,  "   supervoxel: ", supervoxel
+    print "Slic number of segments: ",  len(np.unique(supervoxel_image[..., i]))
+supervoxel_image[whole_rois_mask != 1, :] = 0
+nib.save(nib.Nifti1Image(supervoxel_image, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(supervoxel)+ '_supervoxel.nii.gz')
+
 
 
 endtime = datetime.datetime.now()

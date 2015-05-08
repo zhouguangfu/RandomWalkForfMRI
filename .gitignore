@@ -2,4 +2,5 @@
 .idea
 *.pyc
 configs.py
+test.py
 
