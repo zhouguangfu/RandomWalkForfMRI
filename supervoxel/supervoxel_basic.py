@@ -21,8 +21,8 @@ image = image.get_data()
 complete_atlas_data = nib.load(ATLAS_TOP_DIR + 'complete_atlas_label.nii.gz').get_data()
 complete_image_data = nib.load(ALL_202_SUBJECTS_DATA_DIR).get_data()
 
-left_barin_mask = nib.load(PROB_ROI_202_SUB_FILE + PROB_LEFT_BRAIN_FILE).get_data()
-right_barin_mask = nib.load(PROB_ROI_202_SUB_FILE + PROB_RIGHT_BRAIN_FILE).get_data()
+left_barin_mask = nib.load(PROB_ROI_202_SUB_FILE + PROB_LEFT_BRAIN_FILE).get_data() > 0
+right_barin_mask = nib.load(PROB_ROI_202_SUB_FILE + PROB_RIGHT_BRAIN_FILE).get_data() > 0
 
 r_OFA_mask = nib.load(PROB_ROI_202_SUB_FILE + 'r_OFA_prob.nii.gz').get_data() > 0
 l_OFA_mask = nib.load(PROB_ROI_202_SUB_FILE + 'l_OFA_prob.nii.gz').get_data() > 0
@@ -136,7 +136,6 @@ def compute_background_parcel(subject_index, slic_image):
 
 def select_optimal_parcel_max_region_mean(subject_index, size=None):
     #get the atlas data
-    atlas_data = np.zeros_like(complete_atlas_data[..., subject_index])
     top_atlas_data = np.load(ATLAS_TOP_DIR + 'old_threshold_0/' + str(subject_index) + '_top_sort.npy')
     region_results_RW = np.zeros((image.shape[0], image.shape[1], image.shape[2], DEFAULT_TOP_RANK))
     marker_results_RW = np.zeros((image.shape[0], image.shape[1], image.shape[2], DEFAULT_TOP_RANK))
@@ -149,19 +148,23 @@ def select_optimal_parcel_max_region_mean(subject_index, size=None):
 
     for atlas_index in range(DEFAULT_TOP_RANK):
         atlas_data = np.zeros_like(complete_atlas_data[..., subject_index])
-        atlas_data[complete_atlas_data[..., top_atlas_data[atlas_index]] == 1] = 1
-        atlas_data[complete_atlas_data[..., top_atlas_data[atlas_index]] == 2] = 2
-        atlas_data[complete_atlas_data[..., top_atlas_data[atlas_index]] == 3] = 3
-        atlas_data[complete_atlas_data[..., top_atlas_data[atlas_index]] == 4] = 4
 
         if (atlas_data == 1).sum() == 0:
             atlas_data[r_OFA_label_mask] = 1
+        else:
+            atlas_data[complete_atlas_data[..., top_atlas_data[atlas_index]] == 1] = 1
         if (atlas_data == 2).sum() == 0:
-            atlas_data[l_OFA_label_value] = 2
+            atlas_data[l_OFA_label_mask] = 2
+        else:
+            atlas_data[complete_atlas_data[..., top_atlas_data[atlas_index]] == 2] = 2
         if (atlas_data == 3).sum() == 0:
             atlas_data[r_pFus_label__mask] = 3
+        else:
+            atlas_data[complete_atlas_data[..., top_atlas_data[atlas_index]] == 3] = 3
         if (atlas_data == 4).sum() == 0:
             atlas_data[l_pFus_label_mask] = 4
+        else:
+            atlas_data[complete_atlas_data[..., top_atlas_data[atlas_index]] == 4] = 4
 
         supervoxel_top_one_atlas_results_RW[..., atlas_index] = atlas_data
         top_atlas_image_RW[..., atlas_index] = complete_image_data[..., top_atlas_data[atlas_index]]
