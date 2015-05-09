@@ -18,7 +18,8 @@ image = nib.load(ACTIVATION_DATA_DIR)
 affine = image.get_affine()
 image = image.get_data()
 
-complete_atlas_data = nib.load(ATLAS_TOP_DIR + 'complete_atlas_label.nii.gz').get_data()
+# complete_atlas_data = nib.load(ATLAS_TOP_DIR + 'complete_atlas_label.nii.gz').get_data()
+complete_atlas_data = nib.load(ATLAS_TOP_DIR + 'half_brain_202/all_sub_labels.nii.gz').get_data()
 complete_image_data = nib.load(ALL_202_SUBJECTS_DATA_DIR).get_data()
 
 left_barin_mask = nib.load(PROB_ROI_202_SUB_FILE + PROB_LEFT_BRAIN_FILE).get_data() > 0
@@ -33,10 +34,6 @@ r_OFA_label_mask = nib.load(LABEL_ROI_202_SUB_FILE + 'r_OFA_label.nii.gz').get_d
 l_OFA_label_mask = nib.load(LABEL_ROI_202_SUB_FILE + 'l_OFA_label.nii.gz').get_data() > 0
 r_pFus_label__mask = nib.load(LABEL_ROI_202_SUB_FILE + 'r_pFus_label.nii.gz').get_data() > 0
 l_pFus_label_mask = nib.load(LABEL_ROI_202_SUB_FILE + 'l_pFus_label.nii.gz').get_data() > 0
-
-manual_img = nib.load(ANALYSIS_DIR + 'manual/' + 'lzg_manual.nii.gz')
-affine = manual_img.get_affine()
-manual_data = manual_img.get_data()
 
 def compute_OFA_FFA_mean_prob_peak_distance():
     r_OFA_data = np.zeros_like(r_OFA_mask)
@@ -136,7 +133,7 @@ def compute_background_parcel(subject_index, slic_image):
 
 def select_optimal_parcel_max_region_mean(subject_index, size=None):
     #get the atlas data
-    top_atlas_data = np.load(ATLAS_TOP_DIR + 'old_threshold_0/' + str(subject_index) + '_top_sort.npy')
+    top_atlas_data = np.load(ATLAS_TOP_DIR + 'half_brain_202/' + str(subject_index) + '_top_sort.npy')
     region_results_RW = np.zeros((image.shape[0], image.shape[1], image.shape[2], DEFAULT_TOP_RANK))
     marker_results_RW = np.zeros((image.shape[0], image.shape[1], image.shape[2], DEFAULT_TOP_RANK))
     supervoxel_top_one_atlas_results_RW = np.zeros((image.shape[0], image.shape[1], image.shape[2], DEFAULT_TOP_RANK))

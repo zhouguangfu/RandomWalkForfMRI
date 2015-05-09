@@ -9,11 +9,10 @@ from configs import *
 
 TOP_RANK = 30 # 0 - 100
 ATLAS_NUM = 202
-IMAGE_THRESHOLD = 2.3
+IMAGE_THRESHOLD = 0
 
 #global varibale
 all_202_label_data = nib.load(ATLAS_SUBJECTS_LABELS_DIR).get_data()
-
 all_202_image_data = nib.load(ALL_202_SUBJECTS_DATA_DIR).get_data()
 
 image = nib.load(ACTIVATION_DATA_DIR)
@@ -48,7 +47,7 @@ def generate_atlas_top_index_per_roi(all_image_data):
 
                 print 'inter_mask.sum(): ', inter_mask.sum()
                 simility_vals[j] = np.corrcoef(vector1[inter_mask], vector2[inter_mask])[0, 1]
-                # print 'i: ', i, '   roi_index: ', roi_index, ' j: ', j
+                print 'i: ', i, '   roi_index: ', roi_index, ' j: ', j, '   simility_vals[j]: ',  simility_vals[j]
 
             index = np.argsort(-simility_vals)
             np.save(ATLAS_TOP_DIR + ROI[roi_index] + '_' + str(i) + '_top_sort.npy', index)
@@ -78,34 +77,30 @@ def generate_atlas_top_index_half_brain(all_image_data):
 
                 print 'inter_mask.sum(): ', inter_mask.sum()
                 simility_vals[j] = np.corrcoef(vector1[inter_mask], vector2[inter_mask])[0, 1]
-                print 'i: ', i, '   half_brain_index: ', half_brain_index, ' j: ', j
+                print 'i: ', i, '   half_brain_index: ', half_brain_index, ' j: ', j, '  simility_vals[j]: ', simility_vals[j]
 
             index = np.argsort(-simility_vals)
             np.save(ATLAS_TOP_DIR + LEFT_RIGHT_BRAIN_NAME[half_brain_index] + '_' + str(i) + '_top_sort.npy', index)
 
-            per_roi_label_data = np.zeros((left_brain_mask.shape[0], left_brain_mask.shape[1], left_brain_mask.shape[2], TOP_RANK))
+            left_right_brain_label_data = np.zeros((left_brain_mask.shape[0], left_brain_mask.shape[1], left_brain_mask.shape[2], TOP_RANK))
             for top_index in range(TOP_RANK):
-                per_roi_label_data[..., top_index] = all_202_label_data[..., index[top_index]]
-                if (per_roi_label_data[..., top_index] == (half_brain_index + 1)).sum() <= 0:
+                left_right_brain_label_data[..., top_index] = all_202_label_data[..., index[top_index]]
+                if (left_right_brain_label_data[..., top_index] == (half_brain_index + 1)).sum() <= 0:
                     print 'subject_index: ', i, '----roi_index: ', half_brain_index, '-- ',  ' top_index: ', top_index, '----------'
 
-            nib.save(nib.Nifti1Image(per_roi_label_data, affine), ATLAS_TOP_DIR + LEFT_RIGHT_BRAIN_NAME[half_brain_index] + '_' + str(i) +
+            nib.save(nib.Nifti1Image(left_right_brain_label_data, affine), ATLAS_TOP_DIR + LEFT_RIGHT_BRAIN_NAME[half_brain_index] + '_' + str(i) +
                                                                   '_top_rank_' + str(TOP_RANK) + '.nii.gz')
 
             for k in range(index.shape[0]):
                 writer.writerow([index[k], round(simility_vals[index[k]], 4)])
 
-
-
-
-
 if __name__ == "__main__":
     starttime = datetime.datetime.now()
 
+    # all_202_image_data[all_202_image_data < 0] = 0
+    # generate_atlas_top_index_per_roi(all_202_image_data)
     all_202_image_data[all_202_image_data < 0] = 0
     generate_atlas_top_index_per_roi(all_202_image_data)
-    # all_202_image_data[all_202_image_data < 0] = 0
-    # generate_atlas_top_index(all_202_image_data)
 
     endtime = datetime.datetime.now()
     print 'Time cost: ', (endtime - starttime)
