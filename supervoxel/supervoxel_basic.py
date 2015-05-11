@@ -9,8 +9,8 @@ from configs import *
 from skimage.segmentation import random_walker
 from skimage.segmentation import slic
 
-DEFAULT_TOP_RANK = 202
-SUBJECT_NUM = 3
+DEFAULT_TOP_RANK = 10 # 202
+SUBJECT_NUM = 1
 SUPERVOXEL_SEGMENTATION = 10000
 
 #global varibale
@@ -19,7 +19,7 @@ affine = image.get_affine()
 image = image.get_data()
 
 # complete_atlas_data = nib.load(ATLAS_TOP_DIR + 'complete_atlas_label.nii.gz').get_data()
-complete_atlas_data = nib.load(ATLAS_TOP_DIR + 'half_brain_202/all_sub_labels.nii.gz').get_data()
+complete_atlas_data = nib.load(ATLAS_SUBJECTS_LABELS_DIR).get_data()
 complete_image_data = nib.load(ALL_202_SUBJECTS_DATA_DIR).get_data()
 
 left_barin_mask = nib.load(PROB_ROI_202_SUB_FILE + PROB_LEFT_BRAIN_FILE).get_data() > 0
@@ -80,7 +80,6 @@ def compute_parcel_peak(subject_index):
     #                                               '_supervoxel_localmax.nii.gz')
     slice = image[..., subject_index]
     gray_image = (slice - slice.min()) * 255 / (slice.max() - slice.min())
-    localmax_cords = []
 
     slic_image = slic(gray_image.astype(np.float),
                       n_segments=SUPERVOXEL_SEGMENTATION,
@@ -88,6 +87,12 @@ def compute_parcel_peak(subject_index):
                       sigma=2,
                       multichannel =False,
                       enforce_connectivity=True)
+    return slic_image
+
+def compute_parcel_peak(slic_image, mask=None):
+    localmax_cords = []
+    if mask:
+        slic_image[mask == False] = 0
     supervoxels = np.unique(slic_image)
     for i in supervoxels:
         temp = slice.copy()
@@ -97,7 +102,7 @@ def compute_parcel_peak(subject_index):
 
     localmax_cords = np.array(localmax_cords)
 
-    return localmax_cords, slic_image
+    return localmax_cords
     # return np.array(np.nonzero(localmax_cords)).T
 
 def compute_background_parcel(subject_index, slic_image):
@@ -131,40 +136,132 @@ def compute_background_parcel(subject_index, slic_image):
 
     return left_brain_background_marker, right_brain_background_marker
 
-def select_optimal_parcel_max_region_mean(subject_index, size=None):
+def select_optimal_parcel_max_region_mean_basic(subject_index):
     #get the atlas data
-    top_atlas_data = np.load(ATLAS_TOP_DIR + 'half_brain_202/' + str(subject_index) + '_top_sort.npy')
+    left_brain_top_atlas_data = np.load(ATLAS_TOP_DIR + 'half_brain_202/left_brain_' + str(subject_index) + '_top_sort.npy')
+    right_brain_top_atlas_data = np.load(ATLAS_TOP_DIR + 'half_brain_202/right_brain_' + str(subject_index) + '_top_sort.npy')
+
     region_results_RW = np.zeros((image.shape[0], image.shape[1], image.shape[2], DEFAULT_TOP_RANK))
     marker_results_RW = np.zeros((image.shape[0], image.shape[1], image.shape[2], DEFAULT_TOP_RANK))
     supervoxel_top_one_atlas_results_RW = np.zeros((image.shape[0], image.shape[1], image.shape[2], DEFAULT_TOP_RANK))
-    top_atlas_image_RW = np.zeros((image.shape[0], image.shape[1], image.shape[2], DEFAULT_TOP_RANK))
 
-    mean_OFA_FFA_distance = compute_OFA_FFA_mean_prob_peak_distance()
-    image_peaks, slic_image = compute_parcel_peak(subject_index)
+    slic_image = compute_parcel_peak(subject_index)
     left_brain_background_marker, right_brain_background_marker = compute_background_parcel(subject_index, slic_image)
 
     for atlas_index in range(DEFAULT_TOP_RANK):
         atlas_data = np.zeros_like(complete_atlas_data[..., subject_index])
 
+        atlas_data[complete_atlas_data[..., right_brain_top_atlas_data[atlas_index]] == 1] = 1
+        atlas_data[complete_atlas_data[..., left_brain_top_atlas_data[atlas_index]] == 2] = 2
+        atlas_data[complete_atlas_data[..., right_brain_top_atlas_data[atlas_index]] == 3] = 3
+        atlas_data[complete_atlas_data[..., left_brain_top_atlas_data[atlas_index]] == 4] = 4
+
+        print 'right_brain_top_atlas_data[atlas_index]: ', right_brain_top_atlas_data[atlas_index]
+        print 'left_brain_top_atlas_data[atlas_index]: ', left_brain_top_atlas_data[atlas_index]
+
         if (atlas_data == 1).sum() == 0:
             atlas_data[r_OFA_label_mask] = 1
-        else:
-            atlas_data[complete_atlas_data[..., top_atlas_data[atlas_index]] == 1] = 1
         if (atlas_data == 2).sum() == 0:
             atlas_data[l_OFA_label_mask] = 2
-        else:
-            atlas_data[complete_atlas_data[..., top_atlas_data[atlas_index]] == 2] = 2
         if (atlas_data == 3).sum() == 0:
             atlas_data[r_pFus_label__mask] = 3
-        else:
-            atlas_data[complete_atlas_data[..., top_atlas_data[atlas_index]] == 3] = 3
         if (atlas_data == 4).sum() == 0:
             atlas_data[l_pFus_label_mask] = 4
-        else:
-            atlas_data[complete_atlas_data[..., top_atlas_data[atlas_index]] == 4] = 4
 
         supervoxel_top_one_atlas_results_RW[..., atlas_index] = atlas_data
-        top_atlas_image_RW[..., atlas_index] = complete_image_data[..., top_atlas_data[atlas_index]]
+
+        region_result_RW = np.zeros_like(image[..., subject_index])
+        skeletonize_markers_RW = np.zeros_like(image[..., subject_index])
+
+        #right brain process
+        markers = np.zeros_like(image[..., subject_index])
+        markers[right_brain_background_marker > 0] = 3
+        markers[atlas_data == 1] = 1
+        markers[atlas_data == 3] = 2
+        markers[right_barin_mask == False] = -1
+
+        skeletonize_markers_RW[markers == 1] = 1
+        skeletonize_markers_RW[markers == 2] = 3
+        skeletonize_markers_RW[markers == 3] = 5
+
+        rw_labels = random_walker(image[..., subject_index], markers, beta=10, mode='bf')
+        rw_labels[rw_labels == -1] = 0
+
+        #left brain process
+        markers = np.zeros_like(image[..., subject_index])
+        markers[left_brain_background_marker > 0] = 3
+        markers[atlas_data == 2] = 1
+        markers[atlas_data == 4] = 2
+        markers[left_barin_mask == False] = -1
+
+        skeletonize_markers_RW[markers == 1] = 2
+        skeletonize_markers_RW[markers == 2] = 4
+        skeletonize_markers_RW[markers == 3] = 5
+
+        rw_labels = random_walker(image[..., subject_index], markers, beta=10, mode='bf')
+        rw_labels[rw_labels == -1] = 0
+
+        region_results_RW[..., atlas_index] = region_result_RW
+        marker_results_RW[..., atlas_index] = skeletonize_markers_RW
+
+        print 'subject_index:', subject_index, 'atlas_index: ', atlas_index,  'atlas-based rw finished...'
+
+    nib.save(nib.Nifti1Image(marker_results_RW, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
+                                                         '_skeletonize_markers_supervoxel.nii.gz')
+    nib.save(nib.Nifti1Image(region_results_RW, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
+                                                         '_skeletonize_regions_supervoxel.nii.gz')
+    nib.save(nib.Nifti1Image(slic_image, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
+                                                  '_supervoxel.nii.gz')
+    nib.save(nib.Nifti1Image(supervoxel_top_one_atlas_results_RW, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
+                                                                           '_top_atlas.nii.gz')
+    # nib.save(nib.Nifti1Image(top_atlas_image_RW, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
+    #                                                       '_top_atlas_image.nii.gz')
+
+    region_results_RW[region_results_RW == 5] = 0
+    return region_results_RW
+    # return marker_results_RW
+
+
+def select_optimal_parcel_max_region_mean_neighbor_max(subject_index, radius=1.0):
+    #get the atlas data
+    left_brain_top_atlas_data = np.load(ATLAS_TOP_DIR + 'half_brain_202/left_brain_' + str(subject_index) + '_top_sort.npy')
+    right_brain_top_atlas_data = np.load(ATLAS_TOP_DIR + 'half_brain_202/right_brain_' + str(subject_index) + '_top_sort.npy')
+
+    region_results_RW = np.zeros((image.shape[0], image.shape[1], image.shape[2], DEFAULT_TOP_RANK))
+    marker_results_RW = np.zeros((image.shape[0], image.shape[1], image.shape[2], DEFAULT_TOP_RANK))
+    supervoxel_top_one_atlas_results_RW = np.zeros((image.shape[0], image.shape[1], image.shape[2], DEFAULT_TOP_RANK))
+    # top_atlas_image_RW = np.zeros((image.shape[0], image.shape[1], image.shape[2], DEFAULT_TOP_RANK))
+
+    mean_OFA_FFA_distance = compute_OFA_FFA_mean_prob_peak_distance() * radius
+
+    slic_image = compute_parcel_peak(subject_index)
+    left_brain_background_marker, right_brain_background_marker = compute_background_parcel(subject_index, slic_image)
+    background_mask = np.logical_or(left_brain_background_marker, right_brain_background_marker)
+    background_mask[left_barin_mask == False] = False
+    background_mask[right_barin_mask == False] = False
+    image_peaks = compute_parcel_peak(subject_index, background_mask)
+
+    for atlas_index in range(DEFAULT_TOP_RANK):
+        atlas_data = np.zeros_like(complete_atlas_data[..., subject_index])
+
+        atlas_data[complete_atlas_data[..., right_brain_top_atlas_data[atlas_index]] == 1] = 1
+        atlas_data[complete_atlas_data[..., left_brain_top_atlas_data[atlas_index]] == 2] = 2
+        atlas_data[complete_atlas_data[..., right_brain_top_atlas_data[atlas_index]] == 3] = 3
+        atlas_data[complete_atlas_data[..., left_brain_top_atlas_data[atlas_index]] == 4] = 4
+
+        print 'right_brain_top_atlas_data[atlas_index]: ', right_brain_top_atlas_data[atlas_index]
+        print 'left_brain_top_atlas_data[atlas_index]: ', left_brain_top_atlas_data[atlas_index]
+
+        if (atlas_data == 1).sum() == 0:
+            atlas_data[r_OFA_label_mask] = 1
+        if (atlas_data == 2).sum() == 0:
+            atlas_data[l_OFA_label_mask] = 2
+        if (atlas_data == 3).sum() == 0:
+            atlas_data[r_pFus_label__mask] = 3
+        if (atlas_data == 4).sum() == 0:
+            atlas_data[l_pFus_label_mask] = 4
+
+        supervoxel_top_one_atlas_results_RW[..., atlas_index] = atlas_data
         #get peaks
         atlas_label_peaks = compute_label_peak(atlas_data, subject_index)
 
@@ -330,15 +427,15 @@ def select_optimal_parcel_max_region_mean(subject_index, size=None):
                                                   '_supervoxel.nii.gz')
     nib.save(nib.Nifti1Image(supervoxel_top_one_atlas_results_RW, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
                                                                            '_top_atlas.nii.gz')
-    nib.save(nib.Nifti1Image(top_atlas_image_RW, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
-                                                          '_top_atlas_image.nii.gz')
+    # nib.save(nib.Nifti1Image(top_atlas_image_RW, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
+    #                                                       '_top_atlas_image.nii.gz')
 
     region_results_RW[region_results_RW == 5] = 0
     return region_results_RW
     # return marker_results_RW
 
 def atlas_based_aggragator(subject_index):
-    region_results_RW = select_optimal_parcel_max_region_mean(subject_index)
+    region_results_RW = select_optimal_parcel_max_region_mean_basic(subject_index)
     weight = np.ones(DEFAULT_TOP_RANK, dtype=float)
     weighted_result = []
 

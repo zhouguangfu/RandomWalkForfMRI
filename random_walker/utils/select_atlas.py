@@ -33,6 +33,7 @@ roi_mask_list = [r_OFA_mask, l_OFA_mask, r_pFus_mask, l_pFus_mask]
 left_right_brain_mask_list = [left_brain_mask, right_brain_mask]
 LEFT_RIGHT_BRAIN_NAME = ['left_brain', 'right_brain']
 
+
 def generate_atlas_top_index_per_roi(all_image_data):
     for i in range(image.shape[3]):
         for roi_index in range(len(ROI)):
@@ -46,7 +47,7 @@ def generate_atlas_top_index_per_roi(all_image_data):
                 inter_mask = np.logical_or(vector1, vector2)
 
                 print 'inter_mask.sum(): ', inter_mask.sum()
-                simility_vals[j] = np.corrcoef(vector1[inter_mask], vector2[inter_mask])[0, 1]
+                simility_vals[j] = 0.5 + 0.5 * np.corrcoef(vector1[inter_mask], vector2[inter_mask])[0, 1]
                 print 'i: ', i, '   roi_index: ', roi_index, ' j: ', j, '   simility_vals[j]: ',  simility_vals[j]
 
             index = np.argsort(-simility_vals)
@@ -63,6 +64,8 @@ def generate_atlas_top_index_per_roi(all_image_data):
 
             for k in range(index.shape[0]):
                 writer.writerow([index[k], round(simility_vals[index[k]], 4)])
+
+
 def generate_atlas_top_index_half_brain(all_image_data):
     for i in range(image.shape[3]):
         for half_brain_index in range(len(LEFT_RIGHT_BRAIN_NAME)):
@@ -76,7 +79,7 @@ def generate_atlas_top_index_half_brain(all_image_data):
                 inter_mask = np.logical_or(vector1, vector2)
 
                 print 'inter_mask.sum(): ', inter_mask.sum()
-                simility_vals[j] = np.corrcoef(vector1[inter_mask], vector2[inter_mask])[0, 1]
+                simility_vals[j] = 0.5 + 0.5 * np.corrcoef(vector1[inter_mask], vector2[inter_mask])[0, 1]
                 print 'i: ', i, '   half_brain_index: ', half_brain_index, ' j: ', j, '  simility_vals[j]: ', simility_vals[j]
 
             index = np.argsort(-simility_vals)
@@ -99,8 +102,8 @@ if __name__ == "__main__":
 
     # all_202_image_data[all_202_image_data < 0] = 0
     # generate_atlas_top_index_per_roi(all_202_image_data)
-    all_202_image_data[all_202_image_data < 0] = 0
-    generate_atlas_top_index_per_roi(all_202_image_data)
+    # all_202_image_data[all_202_image_data < 0] = 0
+    generate_atlas_top_index_half_brain(all_202_image_data)
 
     endtime = datetime.datetime.now()
     print 'Time cost: ', (endtime - starttime)
