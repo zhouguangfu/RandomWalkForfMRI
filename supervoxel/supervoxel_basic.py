@@ -74,7 +74,7 @@ def compute_label_peak(atlas_data, subject_index):
                       np.unravel_index(l_pFus_data.argmax(), l_pFus_data.shape)])
     return peaks
 
-def compute_parcel_peak(subject_index):
+def compute_supervoxel(subject_index):
     # localmax_cords = local_maximum(image[..., subject_index], 2)
     # nib.save(nib.Nifti1Image(localmax_cords, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
     #                                               '_supervoxel_localmax.nii.gz')
@@ -92,8 +92,9 @@ def compute_parcel_peak(subject_index):
 def compute_parcel_peak(slic_image, mask=None):
     localmax_cords = []
     if mask:
-        slic_image[mask == False] = 0
+        slic_image[mask] = 0
     supervoxels = np.unique(slic_image)
+    print supervoxels
     for i in supervoxels:
         temp = slice.copy()
         temp[slic_image != i] = -1000
@@ -145,7 +146,7 @@ def select_optimal_parcel_max_region_mean_basic(subject_index):
     marker_results_RW = np.zeros((image.shape[0], image.shape[1], image.shape[2], DEFAULT_TOP_RANK))
     supervoxel_top_one_atlas_results_RW = np.zeros((image.shape[0], image.shape[1], image.shape[2], DEFAULT_TOP_RANK))
 
-    slic_image = compute_parcel_peak(subject_index)
+    slic_image = compute_supervoxel(subject_index)
     left_brain_background_marker, right_brain_background_marker = compute_background_parcel(subject_index, slic_image)
 
     for atlas_index in range(DEFAULT_TOP_RANK):
@@ -234,12 +235,12 @@ def select_optimal_parcel_max_region_mean_neighbor_max(subject_index, radius=1.0
 
     mean_OFA_FFA_distance = compute_OFA_FFA_mean_prob_peak_distance() * radius
 
-    slic_image = compute_parcel_peak(subject_index)
+    slic_image = compute_supervoxel(subject_index)
     left_brain_background_marker, right_brain_background_marker = compute_background_parcel(subject_index, slic_image)
     background_mask = np.logical_or(left_brain_background_marker, right_brain_background_marker)
-    background_mask[left_barin_mask == False] = False
-    background_mask[right_barin_mask == False] = False
-    image_peaks = compute_parcel_peak(subject_index, background_mask)
+    background_mask[left_barin_mask == False] = True
+    background_mask[right_barin_mask == False] = True
+    image_peaks = compute_parcel_peak(slic_image, background_mask)
 
     for atlas_index in range(DEFAULT_TOP_RANK):
         atlas_data = np.zeros_like(complete_atlas_data[..., subject_index])
