@@ -18,7 +18,6 @@ image = nib.load(ACTIVATION_DATA_DIR)
 affine = image.get_affine()
 image = image.get_data()
 
-# complete_atlas_data = nib.load(ATLAS_TOP_DIR + 'complete_atlas_label.nii.gz').get_data()
 complete_atlas_data = nib.load(ATLAS_SUBJECTS_LABELS_DIR).get_data()
 complete_image_data = nib.load(ALL_202_SUBJECTS_DATA_DIR).get_data()
 
@@ -75,9 +74,6 @@ def compute_label_peak(atlas_data, subject_index):
     return peaks
 
 def compute_supervoxel(subject_index):
-    # localmax_cords = local_maximum(image[..., subject_index], 2)
-    # nib.save(nib.Nifti1Image(localmax_cords, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
-    #                                               '_supervoxel_localmax.nii.gz')
     slice = image[..., subject_index]
     gray_image = (slice - slice.min()) * 255 / (slice.max() - slice.min())
 
@@ -95,9 +91,9 @@ def compute_parcel_peak(subject_index, slic_image, mask=None):
     temp_slice = slic_image.copy()
 
     if mask != None:
-        temp_slice[mask == False] = 0
+        temp_slice[mask] = 0
     supervoxels = np.unique(temp_slice)
-    print 'supervoxels: ', supervoxels
+    print 'supervoxels numbers: ', (supervoxels > 0).sum()
 
     for i in supervoxels:
         temp = slice.copy()
@@ -223,7 +219,6 @@ def select_optimal_parcel_max_region_mean_basic(subject_index):
     return region_results_RW
     # return marker_results_RW
 
-
 def select_optimal_parcel_max_region_mean_neighbor_max(subject_index):
     #get the atlas data
     left_brain_top_atlas_data = np.load(ATLAS_TOP_DIR + 'half_brain_202/left_brain_' + str(subject_index) + '_top_sort.npy')
@@ -234,9 +229,6 @@ def select_optimal_parcel_max_region_mean_neighbor_max(subject_index):
 
     slic_image = compute_supervoxel(subject_index)
     left_brain_background_marker, right_brain_background_marker = compute_background_parcel(subject_index, slic_image)
-    background_mask = np.logical_or(left_brain_background_marker, right_brain_background_marker)
-    background_mask[left_barin_mask == False] = True
-    background_mask[right_barin_mask == False] = True
 
     for atlas_index in range(DEFAULT_TOP_RANK):
         atlas_data = np.zeros_like(complete_atlas_data[..., subject_index])
@@ -264,10 +256,10 @@ def select_optimal_parcel_max_region_mean_neighbor_max(subject_index):
         r_pFus_neighbor_mask = binary_dilation((atlas_data == 3).astype(np.int)).astype(np.bool)
         l_pFus_neighbor_mask = binary_dilation((atlas_data == 4).astype(np.int)).astype(np.bool)
 
-        r_OFA_image_peaks = compute_parcel_peak(subject_index, slic_image, r_OFA_neighbor_mask)
-        l_OFA_image_peaks = compute_parcel_peak(subject_index, slic_image, l_OFA_neighbor_mask)
-        r_pFus_image_peaks = compute_parcel_peak(subject_index, slic_image, r_pFus_neighbor_mask)
-        l_pFus_image_peaks = compute_parcel_peak(subject_index, slic_image, l_pFus_neighbor_mask)
+        r_OFA_image_peaks = compute_parcel_peak(subject_index, slic_image, r_OFA_neighbor_mask == False)
+        l_OFA_image_peaks = compute_parcel_peak(subject_index, slic_image, l_OFA_neighbor_mask == False)
+        r_pFus_image_peaks = compute_parcel_peak(subject_index, slic_image, r_pFus_neighbor_mask == False)
+        l_pFus_image_peaks = compute_parcel_peak(subject_index, slic_image, l_pFus_neighbor_mask == False)
         print '--------------- neighbor_mask end... ----------------'
 
         r_OFA_distances = np.linalg.norm((r_OFA_image_peaks - atlas_label_peaks[0]), axis=1)
@@ -421,17 +413,17 @@ def select_optimal_parcel_max_region_mean_radius_max(subject_index, radius=1.0):
 
     region_results_RW = np.zeros((image.shape[0], image.shape[1], image.shape[2], DEFAULT_TOP_RANK))
     marker_results_RW = np.zeros((image.shape[0], image.shape[1], image.shape[2], DEFAULT_TOP_RANK))
-    supervoxel_top_one_atlas_results_RW = np.zeros((image.shape[0], image.shape[1], image.shape[2], DEFAULT_TOP_RANK))
-    # top_atlas_image_RW = np.zeros((image.shape[0], image.shape[1], image.shape[2], DEFAULT_TOP_RANK))
 
     mean_OFA_FFA_distance = compute_OFA_FFA_mean_prob_peak_distance() * radius
 
     slic_image = compute_supervoxel(subject_index)
     left_brain_background_marker, right_brain_background_marker = compute_background_parcel(subject_index, slic_image)
     background_mask = np.logical_or(left_brain_background_marker, right_brain_background_marker)
-    background_mask[left_barin_mask == False] = True
-    background_mask[right_barin_mask == False] = True
-    image_peaks = compute_parcel_peak(slic_image, background_mask)
+    brain_mask = np.logical_or(left_barin_mask, right_barin_mask)
+    background_mask[brain_mask == False] = True
+    nib.save(nib.Nifti1Image(background_mask.astype(int), affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
+                                                     '_background.nii.gz')
+    image_peaks = compute_parcel_peak(subject_index, slic_image, background_mask)
 
     for atlas_index in range(DEFAULT_TOP_RANK):
         atlas_data = np.zeros_like(complete_atlas_data[..., subject_index])
@@ -450,7 +442,6 @@ def select_optimal_parcel_max_region_mean_radius_max(subject_index, radius=1.0):
         if (atlas_data == 4).sum() == 0:
             atlas_data[l_pFus_label_mask] = 4
 
-        supervoxel_top_one_atlas_results_RW[..., atlas_index] = atlas_data
         #get peaks
         atlas_label_peaks = compute_label_peak(atlas_data, subject_index)
 
@@ -549,9 +540,9 @@ def select_optimal_parcel_max_region_mean_radius_max(subject_index, radius=1.0):
 
         #right brain process
         markers = np.zeros_like(image[..., subject_index])
+        markers[right_brain_background_marker > 0] = 3
         markers[r_OFA_parcels] = 1
         markers[r_pFus_parcels] = 2
-        markers[right_brain_background_marker > 0] = 3
         markers[right_barin_mask == False] = -1
 
         skeletonize_markers_RW[markers == 1] = 1
@@ -567,9 +558,9 @@ def select_optimal_parcel_max_region_mean_radius_max(subject_index, radius=1.0):
 
         #left brain process
         markers = np.zeros_like(image[..., subject_index])
+        markers[left_brain_background_marker > 0] = 3
         markers[l_OFA_parcels] = 1
         markers[l_pFus_parcels] = 2
-        markers[left_brain_background_marker > 0] = 3
         markers[left_barin_mask == False] = -1
 
         skeletonize_markers_RW[markers == 1] = 2
