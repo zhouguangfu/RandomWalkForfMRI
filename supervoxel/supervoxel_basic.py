@@ -89,22 +89,25 @@ def compute_supervoxel(subject_index):
                       enforce_connectivity=True)
     return slic_image
 
-def compute_parcel_peak(slic_image, mask=None):
+def compute_parcel_peak(subject_index, slic_image, mask=None):
     localmax_cords = []
-    if mask:
-        slic_image[mask] = 0
-    supervoxels = np.unique(slic_image)
-    print supervoxels
+    slice = image[..., subject_index]
+    temp_slice = slic_image.copy()
+
+    if mask != None:
+        temp_slice[mask == False] = 0
+    supervoxels = np.unique(temp_slice)
+    print 'supervoxels: ', supervoxels
+
     for i in supervoxels:
         temp = slice.copy()
-        temp[slic_image != i] = -1000
+        temp[slic_image != i] = -10000
         peak_cord = np.unravel_index(temp.argmax(), slice.shape)
         localmax_cords.append(peak_cord)
 
     localmax_cords = np.array(localmax_cords)
 
     return localmax_cords
-    # return np.array(np.nonzero(localmax_cords)).T
 
 def compute_background_parcel(subject_index, slic_image):
     from scipy.ndimage.morphology import binary_dilation
@@ -144,7 +147,6 @@ def select_optimal_parcel_max_region_mean_basic(subject_index):
 
     region_results_RW = np.zeros((image.shape[0], image.shape[1], image.shape[2], DEFAULT_TOP_RANK))
     marker_results_RW = np.zeros((image.shape[0], image.shape[1], image.shape[2], DEFAULT_TOP_RANK))
-    supervoxel_top_one_atlas_results_RW = np.zeros((image.shape[0], image.shape[1], image.shape[2], DEFAULT_TOP_RANK))
 
     slic_image = compute_supervoxel(subject_index)
     left_brain_background_marker, right_brain_background_marker = compute_background_parcel(subject_index, slic_image)
@@ -157,9 +159,6 @@ def select_optimal_parcel_max_region_mean_basic(subject_index):
         atlas_data[complete_atlas_data[..., right_brain_top_atlas_data[atlas_index]] == 3] = 3
         atlas_data[complete_atlas_data[..., left_brain_top_atlas_data[atlas_index]] == 4] = 4
 
-        print 'right_brain_top_atlas_data[atlas_index]: ', right_brain_top_atlas_data[atlas_index]
-        print 'left_brain_top_atlas_data[atlas_index]: ', left_brain_top_atlas_data[atlas_index]
-
         if (atlas_data == 1).sum() == 0:
             atlas_data[r_OFA_label_mask] = 1
         if (atlas_data == 2).sum() == 0:
@@ -168,8 +167,6 @@ def select_optimal_parcel_max_region_mean_basic(subject_index):
             atlas_data[r_pFus_label__mask] = 3
         if (atlas_data == 4).sum() == 0:
             atlas_data[l_pFus_label_mask] = 4
-
-        supervoxel_top_one_atlas_results_RW[..., atlas_index] = atlas_data
 
         region_result_RW = np.zeros_like(image[..., subject_index])
         skeletonize_markers_RW = np.zeros_like(image[..., subject_index])
@@ -188,6 +185,10 @@ def select_optimal_parcel_max_region_mean_basic(subject_index):
         rw_labels = random_walker(image[..., subject_index], markers, beta=10, mode='bf')
         rw_labels[rw_labels == -1] = 0
 
+        region_result_RW[rw_labels == 1] = 1
+        region_result_RW[rw_labels == 2] = 3
+        region_result_RW[rw_labels == 3] = 5
+
         #left brain process
         markers = np.zeros_like(image[..., subject_index])
         markers[left_brain_background_marker > 0] = 3
@@ -202,28 +203,218 @@ def select_optimal_parcel_max_region_mean_basic(subject_index):
         rw_labels = random_walker(image[..., subject_index], markers, beta=10, mode='bf')
         rw_labels[rw_labels == -1] = 0
 
+        region_result_RW[rw_labels == 1] = 2
+        region_result_RW[rw_labels == 2] = 4
+        region_result_RW[rw_labels == 3] = 5
+
         region_results_RW[..., atlas_index] = region_result_RW
         marker_results_RW[..., atlas_index] = skeletonize_markers_RW
 
         print 'subject_index:', subject_index, 'atlas_index: ', atlas_index,  'atlas-based rw finished...'
 
     nib.save(nib.Nifti1Image(marker_results_RW, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
-                                                         '_skeletonize_markers_supervoxel.nii.gz')
+                                                         '_basic_markers_supervoxel.nii.gz')
     nib.save(nib.Nifti1Image(region_results_RW, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
-                                                         '_skeletonize_regions_supervoxel.nii.gz')
+                                                         '_basic_regions_supervoxel.nii.gz')
     nib.save(nib.Nifti1Image(slic_image, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
                                                   '_supervoxel.nii.gz')
-    nib.save(nib.Nifti1Image(supervoxel_top_one_atlas_results_RW, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
-                                                                           '_top_atlas.nii.gz')
-    # nib.save(nib.Nifti1Image(top_atlas_image_RW, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
-    #                                                       '_top_atlas_image.nii.gz')
 
     region_results_RW[region_results_RW == 5] = 0
     return region_results_RW
     # return marker_results_RW
 
 
-def select_optimal_parcel_max_region_mean_neighbor_max(subject_index, radius=1.0):
+def select_optimal_parcel_max_region_mean_neighbor_max(subject_index):
+    #get the atlas data
+    left_brain_top_atlas_data = np.load(ATLAS_TOP_DIR + 'half_brain_202/left_brain_' + str(subject_index) + '_top_sort.npy')
+    right_brain_top_atlas_data = np.load(ATLAS_TOP_DIR + 'half_brain_202/right_brain_' + str(subject_index) + '_top_sort.npy')
+
+    region_results_RW = np.zeros((image.shape[0], image.shape[1], image.shape[2], DEFAULT_TOP_RANK))
+    marker_results_RW = np.zeros((image.shape[0], image.shape[1], image.shape[2], DEFAULT_TOP_RANK))
+
+    slic_image = compute_supervoxel(subject_index)
+    left_brain_background_marker, right_brain_background_marker = compute_background_parcel(subject_index, slic_image)
+    background_mask = np.logical_or(left_brain_background_marker, right_brain_background_marker)
+    background_mask[left_barin_mask == False] = True
+    background_mask[right_barin_mask == False] = True
+
+    for atlas_index in range(DEFAULT_TOP_RANK):
+        atlas_data = np.zeros_like(complete_atlas_data[..., subject_index])
+
+        atlas_data[complete_atlas_data[..., right_brain_top_atlas_data[atlas_index]] == 1] = 1
+        atlas_data[complete_atlas_data[..., left_brain_top_atlas_data[atlas_index]] == 2] = 2
+        atlas_data[complete_atlas_data[..., right_brain_top_atlas_data[atlas_index]] == 3] = 3
+        atlas_data[complete_atlas_data[..., left_brain_top_atlas_data[atlas_index]] == 4] = 4
+
+        if (atlas_data == 1).sum() == 0:
+            atlas_data[r_OFA_label_mask] = 1
+        if (atlas_data == 2).sum() == 0:
+            atlas_data[l_OFA_label_mask] = 2
+        if (atlas_data == 3).sum() == 0:
+            atlas_data[r_pFus_label__mask] = 3
+        if (atlas_data == 4).sum() == 0:
+            atlas_data[l_pFus_label_mask] = 4
+
+        #get peaks
+        atlas_label_peaks = compute_label_peak(atlas_data, subject_index)
+
+        from scipy.ndimage.morphology import binary_dilation
+        r_OFA_neighbor_mask = binary_dilation((atlas_data == 1).astype(np.int)).astype(np.bool)
+        l_OFA_neighbor_mask = binary_dilation((atlas_data == 2).astype(np.int)).astype(np.bool)
+        r_pFus_neighbor_mask = binary_dilation((atlas_data == 3).astype(np.int)).astype(np.bool)
+        l_pFus_neighbor_mask = binary_dilation((atlas_data == 4).astype(np.int)).astype(np.bool)
+
+        r_OFA_image_peaks = compute_parcel_peak(subject_index, slic_image, r_OFA_neighbor_mask)
+        l_OFA_image_peaks = compute_parcel_peak(subject_index, slic_image, l_OFA_neighbor_mask)
+        r_pFus_image_peaks = compute_parcel_peak(subject_index, slic_image, r_pFus_neighbor_mask)
+        l_pFus_image_peaks = compute_parcel_peak(subject_index, slic_image, l_pFus_neighbor_mask)
+        print '--------------- neighbor_mask end... ----------------'
+
+        r_OFA_distances = np.linalg.norm((r_OFA_image_peaks - atlas_label_peaks[0]), axis=1)
+        l_OFA_distances = np.linalg.norm((l_OFA_image_peaks - atlas_label_peaks[1]), axis=1)
+        r_pFus_distances = np.linalg.norm((r_pFus_image_peaks - atlas_label_peaks[2]), axis=1)
+        l_pFus_distances = np.linalg.norm((l_pFus_image_peaks - atlas_label_peaks[3]), axis=1)
+
+        #generate the marker
+        #r_pFus
+        r_pFus_distances_argsort = r_pFus_distances.argsort()
+        r_pFus_max_region_mean_value = -10000
+        r_pFus_optimal_label_value = -1
+        for i in range(len(r_pFus_distances)):
+            r_pFus_cord = r_pFus_image_peaks[r_pFus_distances_argsort[i]]
+            if r_pFus_mask[r_pFus_cord[0], r_pFus_cord[1], r_pFus_cord[2]] == 0:
+                continue
+            r_pFus_label_value = slic_image[r_pFus_cord[0],
+                                            r_pFus_cord[1],
+                                            r_pFus_cord[2]]
+            region_mean = image[slic_image == r_pFus_label_value, subject_index].mean()
+            if r_pFus_max_region_mean_value < region_mean:
+                r_pFus_optimal_label_value = r_pFus_label_value
+                r_pFus_max_region_mean_value = region_mean
+
+        if r_pFus_optimal_label_value == -1:
+            print '!!!!!!!!!r_pFus_distances = -1 error!'
+
+        #l_pFus
+        l_pFus_distances_argsort = l_pFus_distances.argsort()
+        l_pFus_max_region_mean_value = -10000
+        l_pFus_optimal_label_value = -1
+        for i in range(len(l_pFus_distances)):
+            l_pFus_cord = l_pFus_image_peaks[l_pFus_distances_argsort[i]]
+            if l_pFus_mask[l_pFus_cord[0], l_pFus_cord[1], l_pFus_cord[2]] == 0:
+                continue
+            l_pFus_label_value = slic_image[l_pFus_cord[0],
+                                            l_pFus_cord[1],
+                                            l_pFus_cord[2]]
+            region_mean = image[slic_image == l_pFus_label_value, subject_index].mean()
+            if l_pFus_max_region_mean_value < region_mean:
+                l_pFus_optimal_label_value = l_pFus_label_value
+                l_pFus_max_region_mean_value = region_mean
+
+        if l_pFus_optimal_label_value == -1:
+            print '!!!!!!!!!!!l_pFus_distances = -1 error!'
+
+        #r_OFA
+        r_OFA_distances_argsort = r_OFA_distances.argsort()
+        r_OFA_max_region_mean_value = -10000
+        r_OFA_optimal_label_value = -1
+        for i in range(len(r_OFA_distances)):
+            r_OFA_cord = r_OFA_image_peaks[r_OFA_distances_argsort[i]]
+            if r_OFA_mask[r_OFA_cord[0], r_OFA_cord[1], r_OFA_cord[2]] == 0:
+                continue
+            r_OFA_label_value = slic_image[r_OFA_cord[0],
+                                           r_OFA_cord[1],
+                                           r_OFA_cord[2]]
+            region_mean = image[slic_image == r_OFA_label_value, subject_index].mean()
+            if r_OFA_max_region_mean_value < region_mean:
+                if r_OFA_label_value != r_pFus_optimal_label_value:
+                    r_OFA_optimal_label_value = r_OFA_label_value
+                    r_OFA_max_region_mean_value = region_mean
+
+        if r_OFA_optimal_label_value == -1:
+            print '!!!!!!!!!!!r_OFA_distances = -1 error!'
+
+        #l_OFA
+        l_OFA_distances_argsort = l_OFA_distances.argsort()
+        l_OFA_max_region_mean_value = -10000
+        l_OFA_optimal_label_value = -1
+        for i in range(len(l_OFA_distances)):
+            l_OFA_cord = l_OFA_image_peaks[l_OFA_distances_argsort[i]]
+            if l_OFA_mask[l_OFA_cord[0], l_OFA_cord[1], l_OFA_cord[2]] == 0:
+                continue
+            l_OFA_label_value = slic_image[l_OFA_cord[0],
+                                           l_OFA_cord[1],
+                                           l_OFA_cord[2]]
+            region_mean = image[slic_image == l_OFA_label_value, subject_index].mean()
+            if l_OFA_max_region_mean_value < region_mean:
+                if l_OFA_label_value != l_pFus_optimal_label_value:
+                    l_OFA_optimal_label_value = l_OFA_label_value
+                    l_OFA_max_region_mean_value = region_mean
+
+        if l_OFA_optimal_label_value == -1:
+            print '!!!!!!!!!!!l_OFA_distances = -1 error!'
+
+        region_result_RW = np.zeros_like(image[..., subject_index])
+        skeletonize_markers_RW = np.zeros_like(image[..., subject_index])
+
+        r_OFA_parcels = (slic_image == r_OFA_optimal_label_value)
+        l_OFA_parcels = (slic_image == l_OFA_optimal_label_value)
+        r_pFus_parcels = (slic_image == r_pFus_optimal_label_value)
+        l_pFus_parcels = (slic_image == l_pFus_optimal_label_value)
+
+        #right brain process
+        markers = np.zeros_like(image[..., subject_index])
+        markers[r_OFA_parcels] = 1
+        markers[r_pFus_parcels] = 2
+        markers[right_brain_background_marker > 0] = 3
+        markers[right_barin_mask == False] = -1
+
+        skeletonize_markers_RW[markers == 1] = 1
+        skeletonize_markers_RW[markers == 2] = 3
+        skeletonize_markers_RW[markers == 3] = 5
+
+        rw_labels = random_walker(image[..., subject_index], markers, beta=10, mode='bf')
+        rw_labels[rw_labels == -1] = 0
+
+        region_result_RW[rw_labels == 1] = 1
+        region_result_RW[rw_labels == 2] = 3
+        region_result_RW[rw_labels == 3] = 5
+
+        #left brain process
+        markers = np.zeros_like(image[..., subject_index])
+        markers[l_OFA_parcels] = 1
+        markers[l_pFus_parcels] = 2
+        markers[left_brain_background_marker > 0] = 3
+        markers[left_barin_mask == False] = -1
+
+        skeletonize_markers_RW[markers == 1] = 2
+        skeletonize_markers_RW[markers == 2] = 4
+        skeletonize_markers_RW[markers == 3] = 5
+
+        rw_labels = random_walker(image[..., subject_index], markers, beta=10, mode='bf')
+        rw_labels[rw_labels == -1] = 0
+
+        region_result_RW[rw_labels == 1] = 2
+        region_result_RW[rw_labels == 2] = 4
+        region_result_RW[rw_labels == 3] = 5
+
+        region_results_RW[..., atlas_index] = region_result_RW
+        marker_results_RW[..., atlas_index] = skeletonize_markers_RW
+
+        print 'subject_index:', subject_index, 'atlas_index: ', atlas_index,  'atlas-based rw finished...'
+
+    nib.save(nib.Nifti1Image(marker_results_RW, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
+                                                         '_neighbor_markers_supervoxel.nii.gz')
+    nib.save(nib.Nifti1Image(region_results_RW, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
+                                                         '_neighbor_regions_supervoxel.nii.gz')
+    nib.save(nib.Nifti1Image(slic_image, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
+                                                  '_supervoxel.nii.gz')
+
+    region_results_RW[region_results_RW == 5] = 0
+    return region_results_RW
+    # return marker_results_RW
+
+def select_optimal_parcel_max_region_mean_radius_max(subject_index, radius=1.0):
     #get the atlas data
     left_brain_top_atlas_data = np.load(ATLAS_TOP_DIR + 'half_brain_202/left_brain_' + str(subject_index) + '_top_sort.npy')
     right_brain_top_atlas_data = np.load(ATLAS_TOP_DIR + 'half_brain_202/right_brain_' + str(subject_index) + '_top_sort.npy')
@@ -249,9 +440,6 @@ def select_optimal_parcel_max_region_mean_neighbor_max(subject_index, radius=1.0
         atlas_data[complete_atlas_data[..., left_brain_top_atlas_data[atlas_index]] == 2] = 2
         atlas_data[complete_atlas_data[..., right_brain_top_atlas_data[atlas_index]] == 3] = 3
         atlas_data[complete_atlas_data[..., left_brain_top_atlas_data[atlas_index]] == 4] = 4
-
-        print 'right_brain_top_atlas_data[atlas_index]: ', right_brain_top_atlas_data[atlas_index]
-        print 'left_brain_top_atlas_data[atlas_index]: ', left_brain_top_atlas_data[atlas_index]
 
         if (atlas_data == 1).sum() == 0:
             atlas_data[r_OFA_label_mask] = 1
@@ -373,19 +561,9 @@ def select_optimal_parcel_max_region_mean_neighbor_max(subject_index, radius=1.0
         rw_labels = random_walker(image[..., subject_index], markers, beta=10, mode='bf')
         rw_labels[rw_labels == -1] = 0
 
-        if (markers == 1).sum() == 0 and (markers == 3).sum() == 0:
-            # raise ValueError("atlas_index: " + atlas_index + " r_OFA and r_FFA missing!")
-            print "atlas_index: " + str(atlas_index) + " r_OFA and r_FFA missing!"
-        elif (markers == 1).sum() == 0:
-            region_result_RW[rw_labels == 1] = 3
-            region_result_RW[rw_labels == 2] = 5
-        elif (markers == 3).sum() == 0:
-            region_result_RW[rw_labels == 1] = 1
-            region_result_RW[rw_labels == 2] = 5
-        else:
-            region_result_RW[rw_labels == 1] = 1
-            region_result_RW[rw_labels == 2] = 3
-            region_result_RW[rw_labels == 3] = 5
+        region_result_RW[rw_labels == 1] = 1
+        region_result_RW[rw_labels == 2] = 3
+        region_result_RW[rw_labels == 3] = 5
 
         #left brain process
         markers = np.zeros_like(image[..., subject_index])
@@ -401,19 +579,9 @@ def select_optimal_parcel_max_region_mean_neighbor_max(subject_index, radius=1.0
         rw_labels = random_walker(image[..., subject_index], markers, beta=10, mode='bf')
         rw_labels[rw_labels == -1] = 0
 
-        if (markers == 2).sum() == 0 and (markers == 4).sum() == 0:
-            # raise ValueError("atlas_index: " + atlas_index + " l_OFA and l_FFA missing!")
-            print "atlas_index: " + str(atlas_index) + " l_OFA and l_FFA missing!"
-        elif (markers == 1).sum() == 0:
-            region_result_RW[rw_labels == 1] = 4
-            region_result_RW[rw_labels == 2] = 5
-        elif (markers == 2).sum() == 0:
-            region_result_RW[rw_labels == 1] = 2
-            region_result_RW[rw_labels == 2] = 5
-        else:
-            region_result_RW[rw_labels == 1] = 2
-            region_result_RW[rw_labels == 2] = 4
-            region_result_RW[rw_labels == 3] = 5
+        region_result_RW[rw_labels == 1] = 2
+        region_result_RW[rw_labels == 2] = 4
+        region_result_RW[rw_labels == 3] = 5
 
         region_results_RW[..., atlas_index] = region_result_RW
         marker_results_RW[..., atlas_index] = skeletonize_markers_RW
@@ -421,22 +589,22 @@ def select_optimal_parcel_max_region_mean_neighbor_max(subject_index, radius=1.0
         print 'subject_index:', subject_index, 'atlas_index: ', atlas_index,  'atlas-based rw finished...'
 
     nib.save(nib.Nifti1Image(marker_results_RW, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
-                                                         '_skeletonize_markers_supervoxel.nii.gz')
+                                                         '_radius_markers_supervoxel.nii.gz')
     nib.save(nib.Nifti1Image(region_results_RW, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
-                                                         '_skeletonize_regions_supervoxel.nii.gz')
+                                                         '_radius_regions_supervoxel.nii.gz')
     nib.save(nib.Nifti1Image(slic_image, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
                                                   '_supervoxel.nii.gz')
-    nib.save(nib.Nifti1Image(supervoxel_top_one_atlas_results_RW, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
-                                                                           '_top_atlas.nii.gz')
-    # nib.save(nib.Nifti1Image(top_atlas_image_RW, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
-    #                                                       '_top_atlas_image.nii.gz')
 
     region_results_RW[region_results_RW == 5] = 0
     return region_results_RW
     # return marker_results_RW
 
+
 def atlas_based_aggragator(subject_index):
-    region_results_RW = select_optimal_parcel_max_region_mean_basic(subject_index)
+    # region_results_RW = select_optimal_parcel_max_region_mean_basic(subject_index)
+    # region_results_RW = select_optimal_parcel_max_region_mean_neighbor_max(subject_index)
+    region_results_RW = select_optimal_parcel_max_region_mean_radius_max(subject_index, 0.5)
+
     weight = np.ones(DEFAULT_TOP_RANK, dtype=float)
     weighted_result = []
 
