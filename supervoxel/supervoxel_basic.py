@@ -9,8 +9,8 @@ from configs import *
 from skimage.segmentation import random_walker
 from skimage.segmentation import slic
 
-DEFAULT_TOP_RANK = 10 # 202
-SUBJECT_NUM = 1
+DEFAULT_TOP_RANK = 202 # 202
+SUBJECT_NUM = 14
 SUPERVOXEL_SEGMENTATION = 10000
 
 #global varibale
@@ -552,9 +552,19 @@ def select_optimal_parcel_max_region_mean_radius_max(subject_index, radius=1.0):
         rw_labels = random_walker(image[..., subject_index], markers, beta=10, mode='bf')
         rw_labels[rw_labels == -1] = 0
 
-        region_result_RW[rw_labels == 1] = 1
-        region_result_RW[rw_labels == 2] = 3
-        region_result_RW[rw_labels == 3] = 5
+        if (markers == 1).sum() == 0 and (markers == 3).sum() == 0:
+            # raise ValueError("atlas_index: " + atlas_index + " r_OFA and r_FFA missing!")
+            raise ValueError("atlas_index: " + str(atlas_index) + " r_OFA and r_FFA missing!")
+        elif (markers == 1).sum() == 0:
+            region_result_RW[rw_labels == 1] = 3
+            region_result_RW[rw_labels == 2] = 5
+        elif (markers == 3).sum() == 0:
+            region_result_RW[rw_labels == 1] = 1
+            region_result_RW[rw_labels == 2] = 5
+        else:
+            region_result_RW[rw_labels == 1] = 1
+            region_result_RW[rw_labels == 2] = 3
+            region_result_RW[rw_labels == 3] = 5
 
         #left brain process
         markers = np.zeros_like(image[..., subject_index])
@@ -570,9 +580,19 @@ def select_optimal_parcel_max_region_mean_radius_max(subject_index, radius=1.0):
         rw_labels = random_walker(image[..., subject_index], markers, beta=10, mode='bf')
         rw_labels[rw_labels == -1] = 0
 
-        region_result_RW[rw_labels == 1] = 2
-        region_result_RW[rw_labels == 2] = 4
-        region_result_RW[rw_labels == 3] = 5
+        if (markers == 2).sum() == 0 and (markers == 4).sum() == 0:
+            # raise ValueError("atlas_index: " + atlas_index + " l_OFA and l_FFA missing!")
+            raise ValueError("atlas_index: " + str(atlas_index) + " l_OFA and l_FFA missing!")
+        elif (markers == 1).sum() == 0:
+            region_result_RW[rw_labels == 1] = 4
+            region_result_RW[rw_labels == 2] = 5
+        elif (markers == 2).sum() == 0:
+            region_result_RW[rw_labels == 1] = 2
+            region_result_RW[rw_labels == 2] = 5
+        else:
+            region_result_RW[rw_labels == 1] = 2
+            region_result_RW[rw_labels == 2] = 4
+            region_result_RW[rw_labels == 3] = 5
 
         region_results_RW[..., atlas_index] = region_result_RW
         marker_results_RW[..., atlas_index] = skeletonize_markers_RW
@@ -593,8 +613,8 @@ def select_optimal_parcel_max_region_mean_radius_max(subject_index, radius=1.0):
 
 def atlas_based_aggragator(subject_index):
     # region_results_RW = select_optimal_parcel_max_region_mean_basic(subject_index)
-    # region_results_RW = select_optimal_parcel_max_region_mean_neighbor_max(subject_index)
-    region_results_RW = select_optimal_parcel_max_region_mean_radius_max(subject_index, 0.5)
+    region_results_RW = select_optimal_parcel_max_region_mean_neighbor_max(subject_index)
+    # region_results_RW = select_optimal_parcel_max_region_mean_radius_max(subject_index, 0.5)
 
     weight = np.ones(DEFAULT_TOP_RANK, dtype=float)
     weighted_result = []
@@ -657,6 +677,7 @@ if __name__ == "__main__":
     rw_atlas_based_aggrator_result = np.zeros((image.shape[0], image.shape[1], image.shape[2], SUBJECT_NUM, len(ROI) + 1))
     # for subject_index in range(0, 7): #by sessions
     for subject_index in range(0, SUBJECT_NUM): #by sessions
+    # for subject_index in range(SUBJECT_NUM, 70):
         # select_optimal_parcel_min_distance(subject_index)
         # select_optimal_parcel_max_region_mean(subject_index)
         weighted_result = atlas_based_aggragator(subject_index)

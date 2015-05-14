@@ -9,8 +9,8 @@ from configs import *
 from skimage.segmentation import random_walker
 from skimage.segmentation import slic
 
-DEFAULT_TOP_RANK = 10 # 202
-SUBJECT_NUM = 35
+DEFAULT_TOP_RANK = 60 # 202
+SUBJECT_NUM = 14
 SUPERVOXEL_SEGMENTATION = 10000
 
 #global varibale
@@ -21,10 +21,10 @@ image = image.get_data()
 def atlas_based_aggragator(subject_index):
     # region_results_RW = nib.load(RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
     #                              '_basic_regions_supervoxel.nii.gz').get_data()
-    # region_results_RW = nib.load(RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
-    #                              '_neighbor_regions_supervoxel.nii.gz').get_data()
     region_results_RW = nib.load(RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
-                                 '_radius_regions_supervoxel.nii.gz').get_data()
+                                 '_neighbor_regions_supervoxel.nii.gz').get_data()
+    # region_results_RW = nib.load(RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
+    #                              '_radius_regions_supervoxel.nii.gz').get_data()
 
     weight = np.ones(DEFAULT_TOP_RANK, dtype=float)
     weighted_result = []
