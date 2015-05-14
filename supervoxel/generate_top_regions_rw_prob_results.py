@@ -1,13 +1,12 @@
 __author__ = 'zgf'
 
 import datetime
+import os
 import numpy as np
 import nibabel as nib
-import os
+import multiprocessing
 
 from configs import *
-from skimage.segmentation import random_walker
-from skimage.segmentation import slic
 
 DEFAULT_TOP_RANK = 60 # 202
 SUBJECT_NUM = 14
@@ -18,13 +17,16 @@ image = nib.load(ACTIVATION_DATA_DIR)
 affine = image.get_affine()
 image = image.get_data()
 
+RESULT_NAMES = ['_basic', '_neighbor', '_radius']
+name = RESULT_NAMES[1]
+
 def atlas_based_aggragator(subject_index):
     # region_results_RW = nib.load(RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
-    #                              '_basic_regions_supervoxel.nii.gz').get_data()
+    #                              name + '_regions_supervoxel.nii.gz').get_data()
     region_results_RW = nib.load(RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
-                                 '_neighbor_regions_supervoxel.nii.gz').get_data()
+                                 name + '_regions_supervoxel.nii.gz').get_data()
     # region_results_RW = nib.load(RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
-    #                              '_radius_regions_supervoxel.nii.gz').get_data()
+    #                              name + '_regions_supervoxel.nii.gz').get_data()
 
     weight = np.ones(DEFAULT_TOP_RANK, dtype=float)
     weighted_result = []
@@ -40,21 +42,14 @@ def atlas_based_aggragator(subject_index):
                                           (image[temp_data == 1, subject_index].max() - image[temp_data == 1, subject_index].min())
 
         weighted_result.append(np.average(temp, axis=3, weights=weight))
-
-        if roi_index > 0:
-            nib.save(nib.Nifti1Image(weighted_result[roi_index], affine), RW_AGGRAGATOR_RESULT_DATA_DIR +
-                                                                          ROI[roi_index-1] + '_' + str(subject_index) + '_aggragator.nii.gz')
-        else:
-            nib.save(nib.Nifti1Image(weighted_result[roi_index], affine), RW_AGGRAGATOR_RESULT_DATA_DIR +
-                                                                          'background_' + str(subject_index) + '_aggragator.nii.gz')
         print 'subject_index: ', subject_index, '   roi_index: ', roi_index
 
     return weighted_result
 
-def generate_rw_prob_result(rw_atlas_based_aggrator_result, subject_sum):
+def generate_rw_prob_result(rw_atlas_based_aggrator_result):
     #generate the prob result
-    temp_image = np.zeros((mask.shape[0], mask.shape[1], mask.shape[2], subject_sum))
-    for subject_index in range(subject_sum):
+    temp_image = np.zeros((mask.shape[0], mask.shape[1], mask.shape[2], SUBJECT_NUM))
+    for subject_index in range(SUBJECT_NUM):
         for roi_index in range(len(ROI) + 1):
             temp_image[rw_atlas_based_aggrator_result[..., subject_index, roi_index] > 0 , subject_index] = 1
 
@@ -69,7 +64,7 @@ def generate_rw_prob_result(rw_atlas_based_aggrator_result, subject_sum):
         print 'generate subject_index: ', subject_index
         # temp_image[temp_image == 5] = 0
     nib.save(nib.Nifti1Image(temp_image, affine), RW_AGGRAGATOR_RESULT_DATA_DIR +
-                                                  'top_' + str(DEFAULT_TOP_RANK) + '_'+ RW_PROB_RESULT_FILE)
+                                                  'top_' + str(DEFAULT_TOP_RANK) + name +  '_'+ RW_PROB_RESULT_FILE)
 
     return temp_image
 
@@ -86,14 +81,23 @@ if __name__ == "__main__":
 
     rw_atlas_based_aggrator_result = np.zeros((image.shape[0], image.shape[1], image.shape[2], SUBJECT_NUM, len(ROI) + 1))
     # for subject_index in range(0, 7): #by sessions
-    for subject_index in range(0, SUBJECT_NUM): #by sessions
-        # select_optimal_parcel_min_distance(subject_index)
-        # select_optimal_parcel_max_region_mean(subject_index)
-        weighted_result = atlas_based_aggragator(subject_index)
-        for i in range(len(ROI) + 1):
-            rw_atlas_based_aggrator_result[..., subject_index, i] = weighted_result[i]
+    # for subject_index in range(0, SUBJECT_NUM): #by sessions
+    #     # select_optimal_parcel_min_distance(subject_index)
+    #     # select_optimal_parcel_max_region_mean(subject_index)
+    #     weighted_result = atlas_based_aggragator(subject_index)
+    #     for i in range(len(ROI) + 1):
+    #         rw_atlas_based_aggrator_result[..., subject_index, i] = weighted_result[i]
 
-    generate_rw_prob_result(rw_atlas_based_aggrator_result, SUBJECT_NUM)
+    pool = multiprocessing.Pool(processes=multiprocessing.cpu_count())
+    pool_outputs = pool.map(atlas_based_aggragator, range(0, SUBJECT_NUM))
+    pool.close()
+    pool.join()
+
+    for subject_index in range(SUBJECT_NUM):
+        for roi_index in range(len(ROI) + 1):
+            rw_atlas_based_aggrator_result[..., subject_index, roi_index] = pool_outputs[subject_index][roi_index]
+
+    generate_rw_prob_result(rw_atlas_based_aggrator_result)
 
     endtime = datetime.datetime.now()
     print 'Time cost: ', (endtime - starttime)

@@ -3,11 +3,9 @@ __author__ = 'zgf'
 import datetime
 import numpy as np
 import nibabel as nib
-import os
 
-from configs import *
-from skimage.segmentation import random_walker
 from skimage.segmentation import slic
+from configs import *
 
 DEFAULT_TOP_RANK = 1
 SUBJECT_NUM = 1
