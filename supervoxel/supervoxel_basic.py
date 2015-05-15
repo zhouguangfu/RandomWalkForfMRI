@@ -96,7 +96,6 @@ def compute_parcel_peak(subject_index, slic_image, mask=None):
     if mask != None:
         temp_slice[mask] = 0
     supervoxels = np.unique(temp_slice)
-    print 'supervoxels numbers: ', (supervoxels > 0).sum()
 
     for i in supervoxels:
         temp = slice.copy()
@@ -361,9 +360,9 @@ def select_optimal_parcel_max_region_mean_neighbor_max(subject_index):
 
         #right brain process
         markers = np.zeros_like(image[..., subject_index])
+        markers[right_brain_background_marker > 0] = 3
         markers[r_OFA_parcels] = 1
         markers[r_pFus_parcels] = 2
-        markers[right_brain_background_marker > 0] = 3
         markers[right_barin_mask == False] = -1
 
         skeletonize_markers_RW[markers == 1] = 1
@@ -379,9 +378,9 @@ def select_optimal_parcel_max_region_mean_neighbor_max(subject_index):
 
         #left brain process
         markers = np.zeros_like(image[..., subject_index])
+        markers[left_brain_background_marker > 0] = 3
         markers[l_OFA_parcels] = 1
         markers[l_pFus_parcels] = 2
-        markers[left_brain_background_marker > 0] = 3
         markers[left_barin_mask == False] = -1
 
         skeletonize_markers_RW[markers == 1] = 2
@@ -561,7 +560,7 @@ def select_optimal_parcel_max_region_mean_radius_max(subject_index, radius=1.0):
 
         if (markers == 1).sum() == 0 and (markers == 3).sum() == 0:
             # raise ValueError("atlas_index: " + atlas_index + " r_OFA and r_FFA missing!")
-            raise ValueError("atlas_index: " + str(atlas_index) + " r_OFA and r_FFA missing!")
+            print ("atlas_index: " + str(atlas_index) + " r_OFA and r_FFA missing!")
         elif (markers == 1).sum() == 0:
             region_result_RW[rw_labels == 1] = 3
             region_result_RW[rw_labels == 2] = 5
@@ -589,7 +588,7 @@ def select_optimal_parcel_max_region_mean_radius_max(subject_index, radius=1.0):
 
         if (markers == 2).sum() == 0 and (markers == 4).sum() == 0:
             # raise ValueError("atlas_index: " + atlas_index + " l_OFA and l_FFA missing!")
-            raise ValueError("atlas_index: " + str(atlas_index) + " l_OFA and l_FFA missing!")
+            print ("atlas_index: " + str(atlas_index) + " l_OFA and l_FFA missing!")
         elif (markers == 1).sum() == 0:
             region_result_RW[rw_labels == 1] = 4
             region_result_RW[rw_labels == 2] = 5
