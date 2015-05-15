@@ -13,6 +13,8 @@ from configs import *
 DEFAULT_TOP_RANK = 202 # 202
 SUBJECT_NUM = 14
 SUPERVOXEL_SEGMENTATION = 10000
+CLUSTER_SIZE = 10
+IS_GENERATE_INTERMEDIATE_VOLUME = True
 
 #global varibale
 image = nib.load(ACTIVATION_DATA_DIR)
@@ -126,14 +128,15 @@ def compute_background_parcel(subject_index, slic_image):
     for j in np.unique(right_brain_supervoxels):
         right_brain_background_marker[slic_image == j] = 1
 
-    nib.save(nib.Nifti1Image(left_brain_dilation.astype(np.int), affine),
-             RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) + '_left_bk_marker_dilation.nii.gz')
-    nib.save(nib.Nifti1Image(right_brain_dilation.astype(np.int), affine),
-             RW_AGGRAGATOR_RESULT_DATA_DIR +  str(subject_index) + '_right_bk_marker_dilation.nii.gz')
-    nib.save(nib.Nifti1Image(left_brain_background_marker, affine),
-             RW_AGGRAGATOR_RESULT_DATA_DIR +  str(subject_index) + '_left_bk_marker.nii.gz')
-    nib.save(nib.Nifti1Image(right_brain_background_marker, affine),
-             RW_AGGRAGATOR_RESULT_DATA_DIR +  str(subject_index) + '_right_bk_marker.nii.gz')
+    if IS_GENERATE_INTERMEDIATE_VOLUME:
+        nib.save(nib.Nifti1Image(left_brain_dilation.astype(np.int), affine),
+                 RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) + '_left_bk_marker_dilation.nii.gz')
+        nib.save(nib.Nifti1Image(right_brain_dilation.astype(np.int), affine),
+                 RW_AGGRAGATOR_RESULT_DATA_DIR +  str(subject_index) + '_right_bk_marker_dilation.nii.gz')
+        nib.save(nib.Nifti1Image(left_brain_background_marker, affine),
+                 RW_AGGRAGATOR_RESULT_DATA_DIR +  str(subject_index) + '_left_bk_marker.nii.gz')
+        nib.save(nib.Nifti1Image(right_brain_background_marker, affine),
+                 RW_AGGRAGATOR_RESULT_DATA_DIR +  str(subject_index) + '_right_bk_marker.nii.gz')
 
     return left_brain_background_marker, right_brain_background_marker
 
@@ -156,13 +159,13 @@ def select_optimal_parcel_max_region_mean_basic(subject_index):
         atlas_data[complete_atlas_data[..., right_brain_top_atlas_data[atlas_index]] == 3] = 3
         atlas_data[complete_atlas_data[..., left_brain_top_atlas_data[atlas_index]] == 4] = 4
 
-        if (atlas_data == 1).sum() == 0:
+        if (atlas_data == 1).sum() < CLUSTER_SIZE:
             atlas_data[r_OFA_label_mask] = 1
-        if (atlas_data == 2).sum() == 0:
+        if (atlas_data == 2).sum() < CLUSTER_SIZE:
             atlas_data[l_OFA_label_mask] = 2
-        if (atlas_data == 3).sum() == 0:
+        if (atlas_data == 3).sum() < CLUSTER_SIZE:
             atlas_data[r_pFus_label__mask] = 3
-        if (atlas_data == 4).sum() == 0:
+        if (atlas_data == 4).sum() < CLUSTER_SIZE:
             atlas_data[l_pFus_label_mask] = 4
 
         region_result_RW = np.zeros_like(image[..., subject_index])
@@ -209,12 +212,13 @@ def select_optimal_parcel_max_region_mean_basic(subject_index):
 
         print 'subject_index:', subject_index, 'atlas_index: ', atlas_index,  'atlas-based rw finished...'
 
-    nib.save(nib.Nifti1Image(marker_results_RW, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
-                                                         '_basic_markers_supervoxel.nii.gz')
-    nib.save(nib.Nifti1Image(region_results_RW, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
-                                                         '_basic_regions_supervoxel.nii.gz')
-    nib.save(nib.Nifti1Image(slic_image, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
-                                                  '_supervoxel.nii.gz')
+    if IS_GENERATE_INTERMEDIATE_VOLUME:
+        nib.save(nib.Nifti1Image(marker_results_RW, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
+                                                            '_basic_markers_supervoxel.nii.gz')
+        nib.save(nib.Nifti1Image(region_results_RW, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
+                                                            '_basic_regions_supervoxel.nii.gz')
+        nib.save(nib.Nifti1Image(slic_image, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
+                                                            '_supervoxel.nii.gz')
 
     region_results_RW[region_results_RW == 5] = 0
     return region_results_RW
@@ -396,12 +400,13 @@ def select_optimal_parcel_max_region_mean_neighbor_max(subject_index):
 
         print 'subject_index:', subject_index, 'atlas_index: ', atlas_index,  'atlas-based rw finished...'
 
-    nib.save(nib.Nifti1Image(marker_results_RW, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
-                                                         '_neighbor_markers_supervoxel.nii.gz')
-    nib.save(nib.Nifti1Image(region_results_RW, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
-                                                         '_neighbor_regions_supervoxel.nii.gz')
-    nib.save(nib.Nifti1Image(slic_image, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
-                                                  '_supervoxel.nii.gz')
+    if IS_GENERATE_INTERMEDIATE_VOLUME:
+        nib.save(nib.Nifti1Image(marker_results_RW, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
+                                                             '_neighbor_markers_supervoxel.nii.gz')
+        nib.save(nib.Nifti1Image(region_results_RW, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
+                                                             '_neighbor_regions_supervoxel.nii.gz')
+        nib.save(nib.Nifti1Image(slic_image, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
+                                                             '_supervoxel.nii.gz')
 
     region_results_RW[region_results_RW == 5] = 0
     return region_results_RW
@@ -422,7 +427,8 @@ def select_optimal_parcel_max_region_mean_radius_max(subject_index, radius=1.0):
     background_mask = np.logical_or(left_brain_background_marker, right_brain_background_marker)
     brain_mask = np.logical_or(left_barin_mask, right_barin_mask)
     background_mask[brain_mask == False] = True
-    nib.save(nib.Nifti1Image(background_mask.astype(int), affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
+    if IS_GENERATE_INTERMEDIATE_VOLUME:
+        nib.save(nib.Nifti1Image(background_mask.astype(int), affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
                                                      '_background.nii.gz')
     image_peaks = compute_parcel_peak(subject_index, slic_image, background_mask)
 
@@ -600,12 +606,13 @@ def select_optimal_parcel_max_region_mean_radius_max(subject_index, radius=1.0):
 
         print 'subject_index:', subject_index, 'atlas_index: ', atlas_index,  'atlas-based rw finished...'
 
-    nib.save(nib.Nifti1Image(marker_results_RW, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
-                                                         '_radius_markers_supervoxel.nii.gz')
-    nib.save(nib.Nifti1Image(region_results_RW, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
-                                                         '_radius_regions_supervoxel.nii.gz')
-    nib.save(nib.Nifti1Image(slic_image, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
-                                                  '_supervoxel.nii.gz')
+    if IS_GENERATE_INTERMEDIATE_VOLUME:
+        nib.save(nib.Nifti1Image(marker_results_RW, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
+                                                            '_radius_markers_supervoxel.nii.gz')
+        nib.save(nib.Nifti1Image(region_results_RW, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
+                                                            '_radius_regions_supervoxel.nii.gz')
+        nib.save(nib.Nifti1Image(slic_image, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
+                                                             '_supervoxel.nii.gz')
 
     region_results_RW[region_results_RW == 5] = 0
     return region_results_RW
@@ -633,12 +640,13 @@ def atlas_based_aggragator(subject_index):
 
         weighted_result.append(np.average(temp, axis=3, weights=weight))
 
-        if roi_index > 0:
-            nib.save(nib.Nifti1Image(weighted_result[roi_index], affine), RW_AGGRAGATOR_RESULT_DATA_DIR +
-                                                                          ROI[roi_index-1] + '_' + str(subject_index) + '_aggragator.nii.gz')
-        else:
-            nib.save(nib.Nifti1Image(weighted_result[roi_index], affine), RW_AGGRAGATOR_RESULT_DATA_DIR +
-                                                                          'background_' + str(subject_index) + '_aggragator.nii.gz')
+        if IS_GENERATE_INTERMEDIATE_VOLUME:
+            if roi_index > 0:
+                nib.save(nib.Nifti1Image(weighted_result[roi_index], affine), RW_AGGRAGATOR_RESULT_DATA_DIR +
+                          ROI[roi_index-1] + '_' + str(subject_index) + '_aggragator.nii.gz')
+            else:
+                nib.save(nib.Nifti1Image(weighted_result[roi_index], affine), RW_AGGRAGATOR_RESULT_DATA_DIR +
+                          'background_' + str(subject_index) + '_aggragator.nii.gz')
         print 'subject_index: ', subject_index, '   roi_index: ', roi_index
 
     return weighted_result
