@@ -2,17 +2,20 @@ __author__ = 'zgf'
 
 import nibabel as nib
 import numpy as np
+import multiprocessing
 
 from skimage.segmentation import slic
 from scipy.ndimage.morphology import binary_dilation
 from configs import *
 
-SUPERVOXEL_SEGMENTATION = 50000
-RW_AGGRAGATOR_RESULT_DATA_DIR = "/Users/zgf/Documents/github/data/"
+SUPERVOXEL_SEGMENTATION = 100000
+SUBJECT_NUM = 70
 
-img = nib.load(RW_AGGRAGATOR_RESULT_DATA_DIR + "zstat1.nii.gz")
-affine = img.get_affine()
-volume = img.get_data()
+images = nib.load(ACTIVATION_DATA_DIR)
+affine = images.get_affine()
+all_volumes = images.get_data()
+
+roi_peak_points = np.load(PEAK_POINTS_DIR + RESULT_NPY_FILE)
 
 def compute_supervoxel(volume):
     gray_image = (volume - volume.min()) * 255 / (volume.max() - volume.min())
@@ -44,9 +47,7 @@ def compute_slic_max_region_mean(volume, region_volume, slic_image):
 
     return neighbor_slic, slic_image == neighbor_values[region_means.argmax()]
 
-
-
-def supervoxel_based_regiongrowing(volume, seed, size=10):
+def supervoxel_based_regiongrowing(slic_image, volume, seed, size=10):
     '''
     :param volume: 3D volume
     :param seed: a list of cordinates
@@ -54,13 +55,11 @@ def supervoxel_based_regiongrowing(volume, seed, size=10):
     :return:
     '''
     seed = np.array(seed)
-    slic_image = compute_supervoxel(volume)
     seed_region = np.zeros_like(slic_image)
     seed_region[slic_image == slic_image[seed[0], seed[1], seed[2]]] = 1
 
     seed_regions = np.zeros((seed_region.shape[0], seed_region.shape[1], seed_region.shape[2], size))
     seed_regions[..., 0] = seed_region
-
     neighbor_slics = np.zeros((seed_region.shape[0], seed_region.shape[1], seed_region.shape[2], size))
 
     for i in range(0, size-1):
@@ -86,30 +85,51 @@ def compute_optional_region_based_AC_value(volume, regions, neighbor_slics):
     # print 'AC_values: ', AC_values
     return regions[..., AC_values.argmax()]
 
+def single_process(subject_index):
+    result_volume = np.zeros((all_volumes.shape[0], all_volumes.shape[1], all_volumes.shape[2]))
+    slic_image = compute_supervoxel(all_volumes[..., subject_index])
 
+    for i in range(len(ROI)):
+        seed = np.array([roi_peak_points[subject_index, i, :]]).astype(np.int)[0]
+        neighbor_slics, regions = supervoxel_based_regiongrowing(slic_image, all_volumes[..., subject_index], seed, size=10)
+        optimal_region = compute_optional_region_based_AC_value(all_volumes[..., subject_index], regions, neighbor_slics)
+        result_volume[optimal_region > 0] = i + 1
+    print 'subject_index: ', subject_index
+    return result_volume, slic_image
 
 if __name__ == "__main__":
     import datetime
     starttime = datetime.datetime.now()
 
-    roi_peak_points = np.load(RW_AGGRAGATOR_RESULT_DATA_DIR + "peak_points_all_sub.npy")
-    all_volumes = nib.load(RW_AGGRAGATOR_RESULT_DATA_DIR + "all_session.nii.gz").get_data()
-    result_vlomes = np.zeros_like(all_volumes)
+    result_volumes = np.zeros((all_volumes.shape[0], all_volumes.shape[1], all_volumes.shape[2], SUBJECT_NUM))
+    slic_images = np.zeros((all_volumes.shape[0], all_volumes.shape[1], all_volumes.shape[2], SUBJECT_NUM))
 
-    for j in range(0, all_volumes.shape[3]):
-    # for j in range(0, 2):
-        for i in range(len(ROI)):
-            seed = np.array([roi_peak_points[j, i, :]]).astype(np.int)[0]
+    #single process
+    # for j in range(0, all_volumes.shape[3]):
+    # # for j in range(0, 2):
+    #     for i in range(len(ROI)):
+    #         seed = np.array([roi_peak_points[j, i, :]]).astype(np.int)[0]
+    #
+    #         neighbor_slics, regions = supervoxel_based_regiongrowing(all_volumes[..., j], seed, size=10)
+    #         optimal_region = compute_optional_region_based_AC_value(all_volumes[..., j], regions, neighbor_slics)
+    #
+    #         result_volumes[optimal_region > 0, j] = i + 1
+    #
+    #         print 'j: ', j, ' i: ', i, ' ROI: ', ROI[i]
 
-            neighbor_slics, regions = supervoxel_based_regiongrowing(all_volumes[..., j], seed, size=10)
-            optimal_region = compute_optional_region_based_AC_value(all_volumes[..., j], regions, neighbor_slics)
+    #multi process
+    pool = multiprocessing.Pool(processes=multiprocessing.cpu_count())
+    pool_outputs = pool.map(single_process, range(0, SUBJECT_NUM))
+    pool.close()
+    pool.join()
 
-            result_vlomes[optimal_region > 0, j] = i + 1
+    for subject_index in range(SUBJECT_NUM):
+        result_volumes[..., subject_index], slic_images[..., subject_index] = pool_outputs[subject_index]
 
-            print 'j: ', j, ' i: ', i, ' ROI: ', ROI[i]
-
-    nib.save(nib.Nifti1Image(result_vlomes, affine),
-             RW_AGGRAGATOR_RESULT_DATA_DIR + str(SUPERVOXEL_SEGMENTATION) + '_result_regions.nii.gz')
+    nib.save(nib.Nifti1Image(result_volumes, affine),
+             SSRG_RESULT_DOC_DATA_DIR + str(SUPERVOXEL_SEGMENTATION) + '_result_regions.nii.gz')
+    nib.save(nib.Nifti1Image(slic_images, affine),
+             SSRG_RESULT_DOC_DATA_DIR + str(SUPERVOXEL_SEGMENTATION) + '_slic_images.nii.gz')
 
     endtime = datetime.datetime.now()
     print 'time: ', (endtime - starttime)
