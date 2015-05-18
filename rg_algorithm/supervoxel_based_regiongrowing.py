@@ -15,6 +15,9 @@ images = nib.load(ACTIVATION_DATA_DIR)
 affine = images.get_affine()
 all_volumes = images.get_data()
 
+left_barin_mask = nib.load(PROB_ROI_202_SUB_FILE + PROB_LEFT_BRAIN_FILE).get_data() > 0
+right_barin_mask = nib.load(PROB_ROI_202_SUB_FILE + PROB_RIGHT_BRAIN_FILE).get_data() > 0
+
 roi_peak_points = np.load(PEAK_POINTS_DIR + RESULT_NPY_FILE)
 
 def compute_supervoxel(volume):
@@ -27,6 +30,14 @@ def compute_supervoxel(volume):
                       multichannel =False,
                       enforce_connectivity=True)
     # nib.save(nib.Nifti1Image(slic_image, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + 'supervoxel.nii.gz')
+
+    unique_values = np.unique(slic_image)
+    size = np.zeros((len(unique_values), ))
+    for i in range(len(unique_values)):
+        size[i] = (slic_image == unique_values[i]).sum()
+
+    print 'size.max(): ', size.max(), '  size.min(): ', size.min(), '  size.mean(): ', size.mean(),
+    '  size.std(): ', size.std()
 
     return slic_image
 
@@ -48,12 +59,6 @@ def compute_slic_max_region_mean(volume, region_volume, slic_image):
     return neighbor_slic, slic_image == neighbor_values[region_means.argmax()]
 
 def supervoxel_based_regiongrowing(slic_image, volume, seed, size=10):
-    '''
-    :param volume: 3D volume
-    :param seed: a list of cordinates
-    :param size: region size
-    :return:
-    '''
     seed = np.array(seed)
     seed_region = np.zeros_like(slic_image)
     seed_region[slic_image == slic_image[seed[0], seed[1], seed[2]]] = 1
@@ -125,6 +130,9 @@ if __name__ == "__main__":
 
     for subject_index in range(SUBJECT_NUM):
         result_volumes[..., subject_index], slic_images[..., subject_index] = pool_outputs[subject_index]
+
+    slic_images[left_barin_mask, :] = 0
+    slic_images[right_barin_mask, :] = 0
 
     nib.save(nib.Nifti1Image(result_volumes, affine),
              SSRG_RESULT_DOC_DATA_DIR + str(SUPERVOXEL_SEGMENTATION) + '_result_regions.nii.gz')

@@ -9,7 +9,6 @@ from docx.shared import Inches
 from configs import *
 from analysis.inter_subject_bar import show_barchart
 
-
 SUBJECT_SESSION_NUM = 7
 
 def dice(volume1, volume2):
@@ -98,7 +97,7 @@ def random_walker(roi_index):
     # all_subject_session_path = ANALYSIS_DIR + 'rw/' + ROI[roi_index] + '_' + RW_PROB_RESULT_FILE
     # all_subject_session = nib.load(all_subject_session_path).get_data()
 
-    all_subject_session = (nib.load(ANALYSIS_DIR + 'rw/rw_prob_result_file.nii.gz').get_data() == (roi_index + 1)).astype(np.int32)
+    all_subject_session = (nib.load(ANALYSIS_DIR + 'rw_prob_result_file.nii.gz').get_data() == (roi_index + 1)).astype(np.int32)
 
     dices = compute_dice_matrix(all_subject_session)
     return dices
