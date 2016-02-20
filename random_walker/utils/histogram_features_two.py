@@ -10,10 +10,8 @@ In addition to the basic histogram, this demo shows a few optional features:
     * Setting the opacity (alpha value).
 
 """
-import numpy as np
-import matplotlib.mlab as mlab
-import matplotlib.pyplot as plt
 from pylab import *
+from configs import TEMP_IMG_DIR
 
 TEMP_IMG_DIR = 'G:/workingdir/BAA/seven/result/temp.png'
 

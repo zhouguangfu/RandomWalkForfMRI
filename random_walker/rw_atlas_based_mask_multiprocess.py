@@ -10,8 +10,9 @@ from scipy.ndimage import morphology
 from skimage.segmentation import random_walker
 from configs import *
 
-TOP_RANK = 30 # 0 - 100
+
 ATLAS_NUM = 202
+TOP_RANK = 30 # 0 - 100
 
 #global varibale
 mask = nib.load(ATLAS_SUBJECTS_LABELS_DIR).get_data()

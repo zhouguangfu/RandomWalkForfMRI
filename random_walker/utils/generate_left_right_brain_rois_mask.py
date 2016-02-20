@@ -1,7 +1,11 @@
 __author__ = 'zgf'
 
+'''
+Generate the left brain mask contains r_OFA and r_FFA and the right brain mask contains l_OFA and l_FFA from the
+202 subjects.
+'''
+
 import datetime
-import multiprocessing
 import numpy as np
 import nibabel as nib
 
@@ -30,7 +34,7 @@ if __name__ == "__main__":
             nib.save(nib.Nifti1Image(half_brain_mask, affine), PROB_ROI_202_SUB_FILE + PROB_RIGHT_BRAIN_FILE)
 
     endtime = datetime.datetime.now()
-    print 'Time cost: ', (endtime - starttime)
+    print "Generate the left and right brain masks's time cost: ", (endtime - starttime)
     print "Program end..."
 
 

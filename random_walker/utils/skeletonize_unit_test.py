@@ -35,9 +35,6 @@ if __name__ == "__main__":
     rw_labels[rw_labels == -1] = 0
     nib.save(nib.Nifti1Image(rw_labels, affine), ATLAS_TOP_DIR + 'test.nii.gz')
 
-
-
-
     endtime = datetime.datetime.now()
     print 'Time cost: ', (endtime - starttime)
     print "Program end..."

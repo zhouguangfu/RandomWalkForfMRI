@@ -7,8 +7,9 @@ import csv
 
 from configs import *
 
-TOP_RANK = 30 # 0 - 100
+TOP_RANK = 40 # 0 - 100
 ATLAS_NUM = 202
+#Compute the similarity threshold.
 IMAGE_THRESHOLD = 0
 
 #global varibale
@@ -100,10 +101,10 @@ def generate_atlas_top_index_half_brain(all_image_data):
 if __name__ == "__main__":
     starttime = datetime.datetime.now()
 
+    all_202_image_data[all_202_image_data < 0] = 0
+    generate_atlas_top_index_per_roi(all_202_image_data)
     # all_202_image_data[all_202_image_data < 0] = 0
-    # generate_atlas_top_index_per_roi(all_202_image_data)
-    # all_202_image_data[all_202_image_data < 0] = 0
-    generate_atlas_top_index_half_brain(all_202_image_data)
+    # generate_atlas_top_index_half_brain(all_202_image_data)
 
     endtime = datetime.datetime.now()
     print 'Time cost: ', (endtime - starttime)

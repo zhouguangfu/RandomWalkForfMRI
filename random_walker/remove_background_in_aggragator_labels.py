@@ -1,5 +1,9 @@
 __author__ = 'zgf'
 
+'''
+Remove the background in the aggragator labels.
+'''
+
 import datetime
 import multiprocessing
 
@@ -9,7 +13,7 @@ from configs import *
 
 SUBJECT_NUM = 70
 ATLAS_NUM = 202
-TOP_RANK = 30
+TOP_RANK = 40
 
 def remove_background(subject_list):
     subject_index, mask, affine = subject_list

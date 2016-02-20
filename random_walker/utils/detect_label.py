@@ -1,4 +1,7 @@
 __author__ = 'zhouguangfu'
+'''
+Detect the size of the label which is less than 10 in the Top Atlas and print the correspongding atlas index.
+'''
 
 import datetime
 import numpy as np
@@ -40,7 +43,7 @@ if __name__ == "__main__":
 
 
     endtime = datetime.datetime.now()
-    print 'Time cost: ', (endtime - starttime)
+    print "Detect all the labels's time cost: ", (endtime - starttime)
     print "Program end..."
 
 

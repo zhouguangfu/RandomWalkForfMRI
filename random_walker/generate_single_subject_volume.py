@@ -1,5 +1,9 @@
 __author__ = 'zgf'
 
+'''
+Generate single subject vlome.
+'''
+
 import numpy as np
 import nibabel as nib
 import os

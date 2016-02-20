@@ -7,7 +7,7 @@ import csv
 
 from configs import *
 
-TOP_RANK = 30 # 0 - 100
+TOP_RANK = 202 # 30
 ATLAS_NUM = 202
 
 #global varibale

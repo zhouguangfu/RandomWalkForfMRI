@@ -1,7 +1,10 @@
 __author__ = 'zgf'
 
+'''
+Generate the proper prior ROI mask which will be used to get the foreground maker in the random walk process.
+'''
+
 import datetime
-import multiprocessing
 import numpy as np
 import nibabel as nib
 
@@ -18,7 +21,7 @@ if __name__ == "__main__":
     for roi_index in range(len(ROI)):
         for thr in threshold:
             roi_data = nib.load(PROB_ROI_202_SUB_FILE + ROI[roi_index] + '_prob.nii.gz').get_data()
-        #     print 'roi_index: ', ROI[roi_index], '   thr: ', thr, '  roi_size:', (roi_data > thr).sum()
+            # print 'roi_index: ', ROI[roi_index], '   thr: ', thr, '  roi_size:', (roi_data > thr).sum()
         # print '---------------------------------------'
 
     # optimal threshold
@@ -33,8 +36,10 @@ if __name__ == "__main__":
         roi_img = nib.load(PROB_ROI_202_SUB_FILE + ROI[roi_index] + '_prob.nii.gz')
         roi_data = roi_img.get_data()
         affine = roi_img.get_affine()
-        nib.save(nib.Nifti1Image((roi_data > optimal_threshold[roi_index]).astype(np.int32), affine), LABEL_ROI_202_SUB_FILE + ROI[roi_index] + '_label.nii.gz')
-        print 'roi_index: ', ROI[roi_index], '   optimal_threshold: ', optimal_threshold[roi_index], '  roi_size:', (roi_data > optimal_threshold[roi_index]).sum()
+        nib.save(nib.Nifti1Image((roi_data > optimal_threshold[roi_index]).astype(np.int32), affine),
+                 LABEL_ROI_202_SUB_FILE + ROI[roi_index] + '_label.nii.gz')
+        print 'roi_index: ', ROI[roi_index], '   optimal_threshold: ', optimal_threshold[roi_index], \
+              '  roi_size:', (roi_data > optimal_threshold[roi_index]).sum()
 
     img = nib.load(ALL_PROB_MASK)
     mask = img.get_data()
