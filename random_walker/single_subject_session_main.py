@@ -12,7 +12,7 @@ from configs import *
 
 SESSION_NUMBERS = 7
 
-DEFAULT_TOP_RANK = 40 #1 - 202
+DEFAULT_TOP_RANK = 202 #1 - 202
 #global varibale
 image = nib.load(ACTIVATION_DATA_DIR)
 affine = image.get_affine()
@@ -60,10 +60,16 @@ def process_single_subject(subject_index):
         r_pFus_indexs =  np.load(ATLAS_TOP_DIR + ROI[2] + '_' + str(subject_index) + '_top_sort.npy')
         l_pFus_indexs =  np.load(ATLAS_TOP_DIR + ROI[3] + '_' + str(subject_index) + '_top_sort.npy')
 
-        atlas_data[complete_atlas_data[..., r_OFA_indexs[atlas_index]] == 1] = 1
-        atlas_data[complete_atlas_data[..., l_OFA_indexs[atlas_index]] == 2] = 2
-        atlas_data[complete_atlas_data[..., r_pFus_indexs[atlas_index]] == 3] = 3
-        atlas_data[complete_atlas_data[..., l_pFus_indexs[atlas_index]] == 4] = 4
+        # atlas_data[complete_atlas_data[..., r_OFA_indexs[atlas_index]] == 1] = 1
+        # atlas_data[complete_atlas_data[..., l_OFA_indexs[atlas_index]] == 2] = 2
+        # atlas_data[complete_atlas_data[..., r_pFus_indexs[atlas_index]] == 3] = 3
+        # atlas_data[complete_atlas_data[..., l_pFus_indexs[atlas_index]] == 4] = 4
+
+        #Use all 202 atalses.
+        atlas_data[complete_atlas_data[..., atlas_index] == 1] = 1
+        atlas_data[complete_atlas_data[..., atlas_index] == 2] = 2
+        atlas_data[complete_atlas_data[..., atlas_index] == 3] = 3
+        atlas_data[complete_atlas_data[..., atlas_index] == 4] = 4
 
         #********************************************* right brain process ********************************************
         #--------------r_OFA---------------
@@ -133,6 +139,8 @@ def process_single_subject(subject_index):
         region_result_RW[rw_labels == 2, atlas_index] = 4
         region_result_RW[rw_labels == 3, atlas_index] = 5
 
+        print 'Random walk => subject_index:', subject_index, '  atlas_index: ', atlas_index
+
     #Save the result
     nib.save(nib.Nifti1Image(skeletonize_markers_RW, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
                                                                '_skeletonize_markers_rw.nii.gz')
@@ -154,21 +162,23 @@ def atlas_based_aggragator(subject_index):
         temp[region_result_RW == (roi_index + 1)] = 1
 
         #The weight value is related to the image intensity.
-        # if roi_index == len(ROI):
-        #     for i in range(temp.shape[3]):
-        #         temp_data = temp[..., i].copy()
-        #         # temp[temp_data == 1, i] = 1.0 - (image[temp_data == 1, subject_index] + np.abs(image[temp_data == 1, subject_index].min())) /\
-        #         #             (np.abs(image[temp_data == 1, subject_index].min()) + np.abs(image[temp_data == 1, subject_index].max()))
-        #         temp[temp_data == 1, i] = (-image[temp_data == 1, subject_index] + np.abs(-image[temp_data == 1, subject_index].min())) /\
-        #                     (np.abs(-image[temp_data == 1, subject_index].min()) + np.abs(-image[temp_data == 1, subject_index].max()))
-        # else:
-        #     for i in range(temp.shape[3]):
-        #         temp_data = temp[..., i].copy()
-        #         temp[temp_data == 1, i] = (image[temp_data == 1, subject_index] + np.abs(image[temp_data == 1, subject_index].min())) /\
-        #                     (np.abs(image[temp_data == 1, subject_index].min()) + np.abs(image[temp_data == 1, subject_index].max()))
+        if roi_index == len(ROI):
+            for i in range(temp.shape[3]):
+                temp_data = temp[..., i].copy()
+                # temp[temp_data == 1, i] = 1.0 - (image[temp_data == 1, subject_index] + np.abs(image[temp_data == 1, subject_index].min())) /\
+                #             (np.abs(image[temp_data == 1, subject_index].min()) + np.abs(image[temp_data == 1, subject_index].max()))
+                temp[temp_data == 1, i] = (-image[temp_data == 1, subject_index] + np.abs(-image[temp_data == 1, subject_index].min())) /\
+                            (np.abs(-image[temp_data == 1, subject_index].min()) + np.abs(-image[temp_data == 1, subject_index].max()))
+        else:
+            for i in range(temp.shape[3]):
+                temp_data = temp[..., i].copy()
+                temp[temp_data == 1, i] = (image[temp_data == 1, subject_index] + np.abs(image[temp_data == 1, subject_index].min())) /\
+                            (np.abs(image[temp_data == 1, subject_index].min()) + np.abs(image[temp_data == 1, subject_index].max()))
 
         #Majority vote.
-        temp = temp * 1. / temp.sum()
+        # temp = temp * 1. / temp.sum()
+
+
         weighted_result.append(np.average(temp, axis=3, weights=weight))
 
         if roi_index < len(ROI):
@@ -229,18 +239,20 @@ if __name__ == "__main__":
         DIR_PREFIX = str(DEFAULT_TOP_RANK) + '/'
         if not os.path.exists(RW_AGGRAGATOR_RESULT_DATA_DIR + DIR_PREFIX):
             os.makedirs(RW_AGGRAGATOR_RESULT_DATA_DIR + DIR_PREFIX)
-        RW_AGGRAGATOR_RESULT_DATA_DIR = RW_AGGRAGATOR_RESULT_DATA_DIR + DIR_PREFIX
 
         print '---------------------------------', DEFAULT_TOP_RANK, '---------------------------------------'
 
         rw_atlas_based_aggrator_result = np.zeros((mask.shape[0], mask.shape[1], mask.shape[2], SESSION_NUMBERS,
                                                    len(ROI) + 1), dtype=np.float)
 
-        pool = multiprocessing.Pool(processes=SESSION_NUMBERS)
-        pool_outputs = pool.map(atlas_based_aggragator, range(subject_index * SESSION_NUMBERS, (subject_index + 1)
-                                                              * SESSION_NUMBERS))
-        pool.close()
-        pool.join()
+        # pool = multiprocessing.Pool(processes=SESSION_NUMBERS)
+        # pool_outputs = pool.map(atlas_based_aggragator, range(subject_index * SESSION_NUMBERS, (subject_index + 1)
+        #                                                       * SESSION_NUMBERS))
+        # pool.close()
+        # pool.join()
+
+        for i in range(subject_index * SESSION_NUMBERS, (subject_index + 1) * SESSION_NUMBERS):
+            atlas_based_aggragator(i)
 
         # for i in range(SESSION_NUMBERS):
         #     for roi_index in range(len(ROI) + 1):
