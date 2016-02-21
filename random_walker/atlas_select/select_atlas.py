@@ -7,7 +7,7 @@ import csv
 
 from configs import *
 
-TOP_RANK = 40 # 0 - 100
+TOP_RANK = 30 # 0 - 100
 ATLAS_NUM = 202
 #Compute the similarity threshold.
 IMAGE_THRESHOLD = 0

@@ -1,13 +1,14 @@
 __author__ = 'zgf'
 
 import datetime
-import numpy as np
-import nibabel as nib
 
+import nibabel as nib
+import numpy as np
 from docx import Document
 from docx.shared import Inches
+
 from configs import *
-from analysis.inter_subject_bar import show_barchart
+from matplot_case.inter_subject_bar import show_barchart
 
 SUBJECT_SESSION_NUM = 7
 

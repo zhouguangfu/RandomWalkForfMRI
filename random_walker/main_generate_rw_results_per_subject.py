@@ -10,10 +10,10 @@ from skimage.segmentation import random_walker
 
 from configs import *
 
-SESSION_NUMBERS = 7
+SUBJECTS_SESSION_NUMBERS = 70
+ATLAS_NUM = 202 #1 - 202
 
-DEFAULT_TOP_RANK = 30 #1 - 202
-#global varibale
+#Global varibale
 image = nib.load(ACTIVATION_DATA_DIR)
 affine = image.get_affine()
 image = image.get_data()
@@ -36,36 +36,18 @@ l_OFA_group_mask = nib.load(LABEL_ROI_202_SUB_FILE + 'l_OFA_label.nii.gz').get_d
 r_pFus_group__mask = nib.load(LABEL_ROI_202_SUB_FILE + 'r_pFus_label.nii.gz').get_data() > 0
 l_pFus_group_mask = nib.load(LABEL_ROI_202_SUB_FILE + 'l_pFus_label.nii.gz').get_data() > 0
 
-#Compute dice coefficient
-def dice(volume1, volume2):
-    if volume1.shape != volume2.shape:
-        raise ValueError("Shape mismatch: volume1 and volume2 must have the same shape.")
-    intersection = np.logical_and(volume1, volume2)
-    if volume1.sum() + volume2.sum() == 0:
-        return 0.0
-    else:
-        return 2. * intersection.sum() / (volume1.sum() + volume2.sum())
 
+#Process subject data.
 def process_single_subject(subject_index):
     global image, complete_atlas_data, left_barin_mask, right_barin_mask
 
-    result_image = np.zeros((complete_atlas_data.shape[0], complete_atlas_data.shape[1],
-                                  complete_atlas_data.shape[2], len(ROI) + 1))
+    result_image = np.zeros_like(complete_atlas_data)
+    result_skeletonize_image = np.zeros_like(complete_atlas_data)
 
-    for atlas_index in range(DEFAULT_TOP_RANK):
+    for atlas_index in range(ATLAS_NUM):
         atlas_data = np.zeros_like(complete_atlas_data[..., 0])
         region_result_RW = np.zeros_like(atlas_data)
         skeletonize_markers_RW = np.zeros_like(atlas_data)
-
-        # r_OFA_indexs =  np.load(ATLAS_TOP_DIR + ROI[0] + '_' + str(subject_index) + '_top_sort.npy')
-        # l_OFA_indexs =  np.load(ATLAS_TOP_DIR + ROI[1] + '_' + str(subject_index) + '_top_sort.npy')
-        # r_pFus_indexs =  np.load(ATLAS_TOP_DIR + ROI[2] + '_' + str(subject_index) + '_top_sort.npy')
-        # l_pFus_indexs =  np.load(ATLAS_TOP_DIR + ROI[3] + '_' + str(subject_index) + '_top_sort.npy')
-
-        # atlas_data[complete_atlas_data[..., r_OFA_indexs[atlas_index]] == 1] = 1
-        # atlas_data[complete_atlas_data[..., l_OFA_indexs[atlas_index]] == 2] = 2
-        # atlas_data[complete_atlas_data[..., r_pFus_indexs[atlas_index]] == 3] = 3
-        # atlas_data[complete_atlas_data[..., l_pFus_indexs[atlas_index]] == 4] = 4
 
         #Use all 202 atalses.
         atlas_data[complete_atlas_data[..., atlas_index] == 1] = 1
@@ -141,43 +123,17 @@ def process_single_subject(subject_index):
         region_result_RW[rw_labels == 2] = 4
         region_result_RW[rw_labels == 3] = 5
 
-        #Aggragator process
-
-        for roi_index in range(len(ROI) + 1):
-            temp = np.zeros_like(region_result_RW)
-            #The weight value is related to the image intensity.
-            if roi_index == len(ROI):
-                temp[region_result_RW == (roi_index + 1)] = (-image[region_result_RW == (roi_index + 1), subject_index] +
-                                          np.abs(-image[region_result_RW == (roi_index + 1), subject_index].min())) / \
-                                         (np.abs(-image[region_result_RW == (roi_index + 1), subject_index].min()) +
-                                          np.abs(-image[region_result_RW == (roi_index + 1), subject_index].max()))
-            else:
-                temp[region_result_RW == (roi_index + 1)] = (image[region_result_RW == (roi_index + 1), subject_index] +
-                                         np.abs(image[region_result_RW == (roi_index + 1), subject_index].min())) /\
-                                         (np.abs(image[region_result_RW == (roi_index + 1), subject_index].min()) +
-                                         np.abs(image[region_result_RW == (roi_index + 1), subject_index].max()))
-
-            #Majority vote.
-            # temp = temp * 1. / temp.sum()
-            result_image[..., roi_index] = result_image[..., roi_index] + temp
+        result_image[..., subject_index] = region_result_RW
+        result_skeletonize_image[..., subject_index] = skeletonize_markers_RW
 
         print 'subject_index: ', subject_index, '   atlas_index: ', atlas_index
 
-    for roi_index in range(len(ROI) + 1):
-        if roi_index < len(ROI):
-            nib.save(nib.Nifti1Image(result_image[..., roi_index], affine), RW_AGGRAGATOR_RESULT_DATA_DIR +
-                                     ROI[roi_index] + '_' + str(subject_index) + '_aggragator.nii.gz')
-        else:
-            nib.save(nib.Nifti1Image(result_image[..., roi_index], affine), RW_AGGRAGATOR_RESULT_DATA_DIR +
-                                     'background_' + str(subject_index) + '_aggragator.nii.gz')
-
     # #Save the result
-    # nib.save(nib.Nifti1Image(skeletonize_markers_RW, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
-    #                                                            '_skeletonize_markers_rw.nii.gz')
-    # nib.save(nib.Nifti1Image(region_result_RW, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
-    #                                                           '_skeletonize_regions_rw.nii.gz')
+    nib.save(nib.Nifti1Image(skeletonize_markers_RW, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
+                                                               '_markers_rw.nii.gz')
+    nib.save(nib.Nifti1Image(region_result_RW, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
+                                                              '_regions_rw.nii.gz')
 
-    # print 'subject_index:', subject_index, '    atlas_index:', atlas_index
     print 'subject_index:', subject_index, 'atlas-based rw finished...'
 
 if __name__ == "__main__":
@@ -190,23 +146,28 @@ if __name__ == "__main__":
     if not os.path.exists(RW_AGGRAGATOR_RESULT_DATA_DIR):
         os.makedirs(RW_AGGRAGATOR_RESULT_DATA_DIR)
 
-    all_means = []
-    all_stds = []
-
     #Multi rocess begin
     print 'Multi process begin...'
-    for subject_index in range(10):
-        DIR_PREFIX = str(DEFAULT_TOP_RANK) + '/'
-        if not os.path.exists(RW_AGGRAGATOR_RESULT_DATA_DIR + DIR_PREFIX):
-            os.makedirs(RW_AGGRAGATOR_RESULT_DATA_DIR + DIR_PREFIX)
 
-        pool = multiprocessing.Pool(processes=SESSION_NUMBERS)
-        pool_outputs = pool.map(process_single_subject, range(subject_index * SESSION_NUMBERS,
-                                                              (subject_index + 1) * SESSION_NUMBERS))
+    DIR_PREFIX = 'subjects_rw_all_atlas_results/'
+    if not os.path.exists(RW_AGGRAGATOR_RESULT_DATA_DIR + DIR_PREFIX):
+        os.makedirs(RW_AGGRAGATOR_RESULT_DATA_DIR + DIR_PREFIX)
+    RW_AGGRAGATOR_RESULT_DATA_DIR = RW_AGGRAGATOR_RESULT_DATA_DIR + DIR_PREFIX
+
+
+    # #For single process
+    # for subject_index in range(SUBJECTS_SESSION_NUMBERS):
+    #     process_single_subject(subject_index)
+
+
+    #For multi process
+    process_num = 7
+    for subject_index in range(SUBJECTS_SESSION_NUMBERS / process_num):
+        pool = multiprocessing.Pool(processes=process_num)
+        pool_outputs = pool.map(process_single_subject, range(subject_index * process_num,
+                                                              (subject_index + 1) * process_num))
         pool.close()
         pool.join()
-
-        break
 
     endtime = datetime.datetime.now()
     print 'Time cost: ', (endtime - starttime)

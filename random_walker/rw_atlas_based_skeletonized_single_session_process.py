@@ -1,16 +1,14 @@
 __author__ = 'zhouguangfu'
 
 import datetime
-import numpy as np
-import nibabel as nib
 import multiprocessing
 import os
 
-from docx import Document
-from docx.shared import Inches
-from configs import *
-from analysis.inter_subject_bar import show_barchart
+import nibabel as nib
+import numpy as np
 from skimage.segmentation import random_walker
+
+from configs import *
 
 SUBJECT_SESSION_INDEX = 0 #0, 1, 2, 3, ,4 ,5, 6, 7, 8, 9
 SESSION_NUMBERS = 7
@@ -48,7 +46,6 @@ l_pFus_group_mask = nib.load(LABEL_ROI_202_SUB_FILE + 'l_pFus_label.nii.gz').get
 
 DEFAULT_BACKGROUND_THR = 200
 
-#Compute dice coefficient
 def dice(volume1, volume2):
     if volume1.shape != volume2.shape:
         raise ValueError("Shape mismatch: volume1 and volume2 must have the same shape.")
@@ -58,7 +55,6 @@ def dice(volume1, volume2):
     else:
         return 2. * intersection.sum() / (volume1.sum() + volume2.sum())
 
-#Aggragator the atlases
 def atlas_based_aggragator(subject_index):
     region_result_RW = process_single_subject(subject_index)
     weight = np.ones(DEFAULT_TOP_RANK, dtype=float)
@@ -66,8 +62,6 @@ def atlas_based_aggragator(subject_index):
     for roi_index in range(len(ROI) + 1):
         temp = np.zeros_like(region_result_RW)
         temp[region_result_RW == (roi_index + 1)] = 1
-
-        from scipy.stats import logistic
 
         if roi_index == len(ROI):
             for i in range(temp.shape[3]):
@@ -260,7 +254,7 @@ if __name__ == "__main__":
 
     # for thr in BACKGROUND_MAKRERS_THR:
     # for thr in OBJECT_MARKERS_NUM:
-    for session_index in range(1):
+    for session_index in range(10):
         SUBJECT_SESSION_INDEX = session_index
 
         for thr in ATLAS_SELECTED:
