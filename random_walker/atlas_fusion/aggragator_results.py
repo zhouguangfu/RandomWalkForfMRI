@@ -10,13 +10,14 @@ image = nib.load(ACTIVATION_DATA_DIR)
 affine = image.get_affine()
 image = image.get_data()
 
-DEFAULT_TOP_RANK = 40
+DEFAULT_TOP_RANK = 202
 SESSION_NUMBERS = 7
 
 #Aggragator the result
 def atlas_based_aggragator(subject_index):
     region_result_RW = np.zeros((image.shape[0], image.shape[1], image.shape[2], DEFAULT_TOP_RANK))
-    single_subject_rw_regions = nib.load(RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) + '_regions_rw.nii.gz').get_data()
+    single_subject_rw_regions = nib.load(RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
+                                         '_regions_rw.nii.gz').get_data()
 
     # r_OFA_indexs =  np.load(ATLAS_TOP_DIR + ROI[0] + '_' + str(subject_index) + '_top_sort.npy')
     # l_OFA_indexs =  np.load(ATLAS_TOP_DIR + ROI[1] + '_' + str(subject_index) + '_top_sort.npy')
@@ -30,6 +31,7 @@ def atlas_based_aggragator(subject_index):
     #     region_result_RW[single_subject_rw_regions[..., r_pFus_indexs[atlas_index]] == 3] = 3
     #     region_result_RW[single_subject_rw_regions[..., l_pFus_indexs[atlas_index]] == 4] = 4
 
+    #Use all atlases.
     region_result_RW = single_subject_rw_regions
 
     weight = np.ones(DEFAULT_TOP_RANK, dtype=float)
@@ -109,16 +111,17 @@ def generate_rw_prob_result(rw_atlas_based_aggrator_result):
 
 if __name__ == "__main__":
     starttime = datetime.datetime.now()
-    endtime = datetime.datetime.now()
 
     if not os.path.exists(RW_AGGRAGATOR_RESULT_DATA_DIR + 'rw/'):
         os.makedirs(RW_AGGRAGATOR_RESULT_DATA_DIR + 'rw/')
 
-    for subject_index in range(image.shape[3]):
-        atlas_based_aggragator(subject_index)
+    # for subject_index in range(image.shape[3]):
+    #     atlas_based_aggragator(subject_index)
 
     rw_atlas_based_aggrator_result = connect_results()
     generate_rw_prob_result(rw_atlas_based_aggrator_result)
+
+    endtime = datetime.datetime.now()
 
     print 'Time cost: ', (endtime - starttime)
     print "Program end..."

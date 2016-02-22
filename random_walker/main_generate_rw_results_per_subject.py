@@ -129,9 +129,9 @@ def process_single_subject(subject_index):
         print 'subject_index: ', subject_index, '   atlas_index: ', atlas_index
 
     # #Save the result
-    nib.save(nib.Nifti1Image(skeletonize_markers_RW, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
+    nib.save(nib.Nifti1Image(result_skeletonize_image, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
                                                                '_markers_rw.nii.gz')
-    nib.save(nib.Nifti1Image(region_result_RW, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
+    nib.save(nib.Nifti1Image(result_image, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
                                                               '_regions_rw.nii.gz')
 
     print 'subject_index:', subject_index, 'atlas-based rw finished...'
@@ -161,13 +161,16 @@ if __name__ == "__main__":
 
 
     #For multi process
-    process_num = 7
+    starttime = datetime.datetime.now()
+    process_num = 5
     for subject_index in range(SUBJECTS_SESSION_NUMBERS / process_num):
         pool = multiprocessing.Pool(processes=process_num)
         pool_outputs = pool.map(process_single_subject, range(subject_index * process_num,
                                                               (subject_index + 1) * process_num))
         pool.close()
         pool.join()
+
+        break
 
     endtime = datetime.datetime.now()
     print 'Time cost: ', (endtime - starttime)
