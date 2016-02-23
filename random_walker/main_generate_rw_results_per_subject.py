@@ -123,8 +123,8 @@ def process_single_subject(subject_index):
         region_result_RW[rw_labels == 2] = 4
         region_result_RW[rw_labels == 3] = 5
 
-        result_image[..., subject_index] = region_result_RW
-        result_skeletonize_image[..., subject_index] = skeletonize_markers_RW
+        result_image[..., atlas_index] = region_result_RW
+        result_skeletonize_image[..., atlas_index] = skeletonize_markers_RW
 
         print 'subject_index: ', subject_index, '   atlas_index: ', atlas_index
 
@@ -154,7 +154,6 @@ if __name__ == "__main__":
         os.makedirs(RW_AGGRAGATOR_RESULT_DATA_DIR + DIR_PREFIX)
     RW_AGGRAGATOR_RESULT_DATA_DIR = RW_AGGRAGATOR_RESULT_DATA_DIR + DIR_PREFIX
 
-
     # #For single process
     # for subject_index in range(SUBJECTS_SESSION_NUMBERS):
     #     process_single_subject(subject_index)
@@ -163,14 +162,15 @@ if __name__ == "__main__":
     #For multi process
     starttime = datetime.datetime.now()
     process_num = 5
-    for subject_index in range(SUBJECTS_SESSION_NUMBERS / process_num):
+    for cycle_index in range(SUBJECTS_SESSION_NUMBERS / process_num):
         pool = multiprocessing.Pool(processes=process_num)
-        pool_outputs = pool.map(process_single_subject, range(subject_index * process_num,
-                                                              (subject_index + 1) * process_num))
+        pool_outputs = pool.map(process_single_subject, range(cycle_index * process_num,
+                                                              (cycle_index + 1) * process_num))
         pool.close()
         pool.join()
 
-        break
+        print 'Cycle index: ', cycle_index, 'Time cost: ', (datetime.datetime.now() - starttime)
+        starttime = datetime.datetime.now()
 
     endtime = datetime.datetime.now()
     print 'Time cost: ', (endtime - starttime)

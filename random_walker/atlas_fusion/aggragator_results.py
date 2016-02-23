@@ -5,6 +5,7 @@ import nibabel as nib
 from configs import *
 import datetime
 import os
+import multiprocessing
 
 image = nib.load(ACTIVATION_DATA_DIR)
 affine = image.get_affine()
@@ -16,8 +17,8 @@ SESSION_NUMBERS = 7
 #Aggragator the result
 def atlas_based_aggragator(subject_index):
     region_result_RW = np.zeros((image.shape[0], image.shape[1], image.shape[2], DEFAULT_TOP_RANK))
-    single_subject_rw_regions = nib.load(RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
-                                         '_regions_rw.nii.gz').get_data()
+    single_subject_rw_regions = nib.load(RW_AGGRAGATOR_RESULT_DATA_DIR + 'subjects_rw_all_atlas_results/' +
+                                         str(subject_index) + '_regions_rw.nii.gz').get_data()
 
     # r_OFA_indexs =  np.load(ATLAS_TOP_DIR + ROI[0] + '_' + str(subject_index) + '_top_sort.npy')
     # l_OFA_indexs =  np.load(ATLAS_TOP_DIR + ROI[1] + '_' + str(subject_index) + '_top_sort.npy')
@@ -54,10 +55,10 @@ def atlas_based_aggragator(subject_index):
 
         if roi_index < len(ROI):
             nib.save(nib.Nifti1Image(weighted_result, affine), RW_AGGRAGATOR_RESULT_DATA_DIR +
-                                ROI[roi_index] + '_' + str(subject_index) + '_aggragator.nii.gz')
+                                ROI[roi_index] + '_' + str(subject_index) + '_non_weight.nii.gz')
         else:
             nib.save(nib.Nifti1Image(weighted_result, affine), RW_AGGRAGATOR_RESULT_DATA_DIR +
-                                'background_' + str(subject_index) + '_aggragator.nii.gz')
+                                'background_' + str(subject_index) + '_non_weight.nii.gz')
         print 'subject_index: ', subject_index, '   roi_index: ', roi_index
 
 def connect_results():
@@ -67,19 +68,19 @@ def connect_results():
         if roi_index != len(ROI):
             for i in range(image.shape[3]):
                 rw_atlas_based_aggrator_result[..., i] = \
-                    nib.load(RW_AGGRAGATOR_RESULT_DATA_DIR + str(DEFAULT_TOP_RANK) + '/' +
-                             ROI[roi_index] + '_' + str(i)+ '_aggragator.nii.gz').get_data()
+                    nib.load(RW_AGGRAGATOR_RESULT_DATA_DIR + ROI[roi_index] + '_' + str(i)+
+                             '_non_weight.nii.gz').get_data()
 
-            nib.save(nib.Nifti1Image(rw_atlas_based_aggrator_result, affine),
-                     RW_AGGRAGATOR_RESULT_DATA_DIR + 'rw/' + ROI[roi_index] + '_aggragator.nii.gz')
+            nib.save(nib.Nifti1Image(rw_atlas_based_aggrator_result, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + 'rw/' +
+                     ROI[roi_index] + '_non_weight.nii.gz')
         else:
             for i in range(image.shape[3]):
                 rw_atlas_based_aggrator_result[..., i] = \
-                    nib.load(RW_AGGRAGATOR_RESULT_DATA_DIR + str(DEFAULT_TOP_RANK) + '/background_' +
-                             str(i)+ '_aggragator.nii.gz').get_data()
+                    nib.load(RW_AGGRAGATOR_RESULT_DATA_DIR + 'subjects_rw_all_atlas_results' + '/background_' +
+                             str(i)+ '_non_weight.nii.gz').get_data()
 
             nib.save(nib.Nifti1Image(rw_atlas_based_aggrator_result, affine),
-                     RW_AGGRAGATOR_RESULT_DATA_DIR + 'rw/' + 'background_aggragator.nii.gz')
+                     RW_AGGRAGATOR_RESULT_DATA_DIR + 'rw/' + 'background_non_weight.nii.gz')
 
         rw_atlas_based_aggrator_results[..., roi_index] = rw_atlas_based_aggrator_result
         print 'connect_results: roi_index: ', roi_index
@@ -107,8 +108,6 @@ def generate_rw_prob_result(rw_atlas_based_aggrator_result):
     nib.save(nib.Nifti1Image(temp_image, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + 'rw/' + RW_PROB_RESULT_FILE)
 
 
-
-
 if __name__ == "__main__":
     starttime = datetime.datetime.now()
 
@@ -117,6 +116,17 @@ if __name__ == "__main__":
 
     # for subject_index in range(image.shape[3]):
     #     atlas_based_aggragator(subject_index)
+
+    process_num = 5
+    for cycle_index in range(image.shape[3] / process_num):
+        pool = multiprocessing.Pool(processes=process_num)
+        pool_outputs = pool.map(atlas_based_aggragator, range(cycle_index * process_num,
+                                                              (cycle_index + 1) * process_num))
+        pool.close()
+        pool.join()
+
+        print 'Cycle index: ', cycle_index, 'Time cost: ', (datetime.datetime.now() - starttime)
+        starttime = datetime.datetime.now()
 
     rw_atlas_based_aggrator_result = connect_results()
     generate_rw_prob_result(rw_atlas_based_aggrator_result)
