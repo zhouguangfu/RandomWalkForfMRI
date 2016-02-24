@@ -11,7 +11,7 @@ image = nib.load(ACTIVATION_DATA_DIR)
 affine = image.get_affine()
 image = image.get_data()
 
-DEFAULT_TOP_RANK = 202
+DEFAULT_TOP_RANK = 50
 SESSION_NUMBERS = 7
 
 #Aggragator the result
@@ -33,7 +33,7 @@ def atlas_based_aggragator(subject_index):
     #     region_result_RW[single_subject_rw_regions[..., l_pFus_indexs[atlas_index]] == 4] = 4
 
     #Use all atlases.
-    region_result_RW = single_subject_rw_regions
+    region_result_RW = single_subject_rw_regions[..., :DEFAULT_TOP_RANK]
 
     weight = np.ones(DEFAULT_TOP_RANK, dtype=float)
 
@@ -44,14 +44,23 @@ def atlas_based_aggragator(subject_index):
         for i in range(temp.shape[3]):
             if roi_index == len(ROI):
                 temp_data = temp[..., i].copy()
-                temp[temp_data == 1, i] = (-image[temp_data == 1, subject_index] + np.abs(-image[temp_data == 1, subject_index].min())) /\
+                if (temp_data == 1).sum() == 0:
+                    weight[i] = 0
+                else:
+                    temp[temp_data == 1, i] = (-image[temp_data == 1, subject_index] + np.abs(-image[temp_data == 1, subject_index].min())) /\
                             (np.abs(-image[temp_data == 1, subject_index].min()) + np.abs(-image[temp_data == 1, subject_index].max()))
             else:
                 temp_data = temp[..., i].copy()
-                temp[temp_data == 1, i] = (image[temp_data == 1, subject_index] + np.abs(image[temp_data == 1, subject_index].min())) /\
+                if (temp_data == 1).sum() == 0:
+                    weight[i] = 0
+                else:
+                    temp[temp_data == 1, i] = (image[temp_data == 1, subject_index] + np.abs(image[temp_data == 1, subject_index].min())) /\
                             (np.abs(image[temp_data == 1, subject_index].min()) + np.abs(image[temp_data == 1, subject_index].max()))
 
-        weighted_result = np.average(temp, axis=3, weights=weight)
+        if weight.sum() == 0:
+            weighted_result = np.zeros((image.shape[0], image.shape[1], image.shape[2]))
+        else:
+            weighted_result = np.average(temp, axis=3, weights=weight)
 
         if roi_index < len(ROI):
             nib.save(nib.Nifti1Image(weighted_result, affine), RW_AGGRAGATOR_RESULT_DATA_DIR +

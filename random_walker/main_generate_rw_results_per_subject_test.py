@@ -11,7 +11,7 @@ from skimage.segmentation import random_walker
 from configs import *
 
 SUBJECTS_SESSION_NUMBERS = 70
-ATLAS_NUM = 202 #1 - 202
+ATLAS_NUM = 50 #1 - 202
 
 #Global varibale
 image = nib.load(ACTIVATION_DATA_DIR)
@@ -43,6 +43,7 @@ def process_single_subject(subject_index):
 
     result_image = np.zeros_like(complete_atlas_data[..., 0 : ATLAS_NUM])
     result_skeletonize_image = np.zeros_like(complete_atlas_data[..., 0 : ATLAS_NUM])
+    more_than_2_3_mask = image[..., subject_index] >= 2.3
 
     for atlas_index in range(ATLAS_NUM):
         atlas_data = np.zeros_like(complete_atlas_data[..., 0])
@@ -55,73 +56,118 @@ def process_single_subject(subject_index):
         atlas_data[complete_atlas_data[..., atlas_index] == 3] = 3
         atlas_data[complete_atlas_data[..., atlas_index] == 4] = 4
 
+        r_OFA_flag = False
+        r_pFus_flag = False
+        l_OFA_flag = False
+        l_pFus_flag = False
+
         #********************************************* right brain process ********************************************
         #--------------r_OFA---------------
         markers = np.zeros_like(image[..., subject_index])
         atlas_roi_mask = np.logical_and(atlas_data == 1, thin_foreground_image[..., subject_index] == 1)
+        atlas_roi_mask = np.logical_and(atlas_roi_mask, more_than_2_3_mask)
         if atlas_roi_mask.sum() <= 0:
-            atlas_roi_mask = np.logical_and(r_OFA_group_mask, thin_foreground_image[..., subject_index] == 1)
-        markers[atlas_roi_mask] = 1
+            r_OFA_flag = True
+        else:
+            markers[atlas_roi_mask] = 1
 
         #--------------r_pFus-------------
         atlas_roi_mask = np.logical_and(atlas_data == 3, thin_foreground_image[..., subject_index] == 1)
+        atlas_roi_mask = np.logical_and(atlas_roi_mask, more_than_2_3_mask)
         if atlas_roi_mask.sum() <= 0:
-            atlas_roi_mask = np.logical_and(r_pFus_group__mask, thin_foreground_image[..., subject_index] == 1)
-        markers[atlas_roi_mask] = 2
+            r_pFus_flag = True
+        else:
+            markers[atlas_roi_mask] = 2
 
-        back_image = image[np.logical_and(right_barin_mask, thin_background_image[..., subject_index] == 1), subject_index]
-        # back_threshold = np.sort(back_image)[DEFAULT_BACKGROUND_THR]
+        if r_OFA_flag and r_pFus_flag:
+            #All markers are empty.
+            pass
+        elif r_OFA_flag:
+            markers[markers == 2] = 1
+            markers[thin_background_image[..., subject_index] == 1] = 2
+            markers[right_barin_mask == False] = -1
+            rw_labels = random_walker(image[..., subject_index], markers, beta=10, mode='bf')
+            region_result_RW[rw_labels == 1] = 3
+            region_result_RW[rw_labels == 2] = 5
 
-        # markers[np.logical_and(image[..., subject_index] < back_threshold, thin_background_image[..., subject_index] == 1)] = 3
-        markers[thin_background_image[..., subject_index] == 1] = 3
-        markers[right_barin_mask == False] = -1
+        elif r_pFus_flag:
+            markers[thin_background_image[..., subject_index] == 1] = 2
+            markers[right_barin_mask == False] = -1
+            rw_labels = random_walker(image[..., subject_index], markers, beta=10, mode='bf')
+            region_result_RW[rw_labels == 1] = 1
+            region_result_RW[rw_labels == 2] = 5
+        else:
+            markers[thin_background_image[..., subject_index] == 1] = 3
+            markers[right_barin_mask == False] = -1
+            rw_labels = random_walker(image[..., subject_index], markers, beta=10, mode='bf')
+            rw_labels[rw_labels == -1] = 0
+            region_result_RW[rw_labels == 1] = 1
+            region_result_RW[rw_labels == 2] = 3
+            region_result_RW[rw_labels == 3] = 5
+
         skeletonize_markers_RW[markers == 1] = 1
         skeletonize_markers_RW[markers == 2] = 3
         skeletonize_markers_RW[markers == 3] = 5
-
-        rw_labels = random_walker(image[..., subject_index], markers, beta=10, mode='bf')
-        rw_labels[rw_labels == -1] = 0
-        region_result_RW[rw_labels == 1] = 1
-        region_result_RW[rw_labels == 2] = 3
-        region_result_RW[rw_labels == 3] = 5
 
         #********************************************* left brain process *********************************************
         #-------------------l_OFA--------------------
         markers = np.zeros_like(image[..., subject_index])
 
         atlas_roi_mask = np.logical_and(atlas_data == 2, thin_foreground_image[..., subject_index] == 1)
+        atlas_roi_mask = np.logical_and(atlas_roi_mask, more_than_2_3_mask)
         if atlas_roi_mask.sum() <= 0:
-            atlas_roi_mask = np.logical_and(l_OFA_group_mask, thin_foreground_image[..., subject_index] == 1)
-            # fore_image = image[np.logical_and(atlas_data == 2, thin_foreground_image[..., subject_index] == 1), subject_index]
-        # fore_threshold = -np.sort(-fore_image)[30]
-        # print 'subject index: ', subject_index, 'atlas_index: ', atlas_index, '   l_OFA size: ', atlas_roi_mask.sum()
-        markers[atlas_roi_mask] = 1
+            l_OFA_flag = True
+        else:
+            markers[atlas_roi_mask] = 1
 
         #-------------------l_pFus-------------------
         atlas_roi_mask = np.logical_and(atlas_data == 4, thin_foreground_image[..., subject_index] == 1)
+        atlas_roi_mask = np.logical_and(atlas_roi_mask, more_than_2_3_mask)
         if atlas_roi_mask.sum() <= 0:
-            atlas_roi_mask = np.logical_and(l_pFus_group_mask, thin_foreground_image[..., subject_index] == 1)
-
-        # fore_image = image[np.logical_and(atlas_data == 4, thin_foreground_image[..., subject_index] == 1), subject_index]
-        # fore_threshold = -np.sort(-fore_image)[30]
-        # print 'subject index: ', subject_index, 'atlas_index: ', atlas_index, '   l_pFus size: ', atlas_roi_mask.sum()
-        markers[atlas_roi_mask] = 2
+            l_pFus_flag = True
+        else:
+            markers[atlas_roi_mask] = 2
 
         back_image = image[np.logical_and(left_barin_mask, thin_background_image[..., subject_index] == 1), subject_index]
         # back_threshold = np.sort(back_image)[DEFAULT_BACKGROUND_THR]
 
         # markers[np.logical_and(image[..., subject_index] < back_threshold, thin_background_image[..., subject_index] == 1)] = 3
+
+        if l_OFA_flag and l_pFus_flag:
+            #All markers are empty.
+            pass
+        elif l_OFA_flag:
+            markers[markers == 4] = 1
+            markers[thin_background_image[..., subject_index] == 1] = 2
+            markers[left_barin_mask == False] = -1
+            rw_labels = random_walker(image[..., subject_index], markers, beta=10, mode='bf')
+            region_result_RW[rw_labels == 1] = 4
+            region_result_RW[rw_labels == 2] = 5
+
+        elif l_pFus_flag:
+            markers[markers == 2] = 1
+            markers[thin_background_image[..., subject_index] == 1] = 2
+            markers[right_barin_mask == False] = -1
+            rw_labels = random_walker(image[..., subject_index], markers, beta=10, mode='bf')
+            region_result_RW[rw_labels == 1] = 2
+            region_result_RW[rw_labels == 2] = 5
+        else:
+            markers[thin_background_image[..., subject_index] == 1] = 3
+            markers[left_barin_mask == False] = -1
+
+            rw_labels = random_walker(image[..., subject_index], markers, beta=10, mode='bf')
+            rw_labels[rw_labels == -1] = 0
+            region_result_RW[rw_labels == 1] = 2
+            region_result_RW[rw_labels == 2] = 4
+            region_result_RW[rw_labels == 3] = 5
+
         markers[thin_background_image[..., subject_index] == 1] = 3
         markers[left_barin_mask == False] = -1
         skeletonize_markers_RW[markers == 1] = 2
         skeletonize_markers_RW[markers == 2] = 4
         skeletonize_markers_RW[markers == 3] = 5
 
-        rw_labels = random_walker(image[..., subject_index], markers, beta=10, mode='bf')
-        rw_labels[rw_labels == -1] = 0
-        region_result_RW[rw_labels == 1] = 2
-        region_result_RW[rw_labels == 2] = 4
-        region_result_RW[rw_labels == 3] = 5
+
 
         result_image[..., atlas_index] = region_result_RW
         result_skeletonize_image[..., atlas_index] = skeletonize_markers_RW
