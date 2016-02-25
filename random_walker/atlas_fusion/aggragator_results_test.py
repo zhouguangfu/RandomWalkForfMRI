@@ -11,7 +11,7 @@ image = nib.load(ACTIVATION_DATA_DIR)
 affine = image.get_affine()
 image = image.get_data()
 
-DEFAULT_TOP_RANK = 50
+DEFAULT_TOP_RANK = 202
 SESSION_NUMBERS = 7
 
 #Aggragator the result
@@ -126,16 +126,16 @@ if __name__ == "__main__":
     for subject_index in range(image.shape[3]):
         atlas_based_aggragator(subject_index)
 
-    # process_num = 5
-    # for cycle_index in range(image.shape[3] / process_num):
-    #     pool = multiprocessing.Pool(processes=process_num)
-    #     pool_outputs = pool.map(atlas_based_aggragator, range(cycle_index * process_num,
-    #                                                           (cycle_index + 1) * process_num))
-    #     pool.close()
-    #     pool.join()
-    #
-    #     print 'Cycle index: ', cycle_index, 'Time cost: ', (datetime.datetime.now() - starttime)
-    #     starttime = datetime.datetime.now()
+    process_num = 2
+    for cycle_index in range(image.shape[3] / process_num):
+        pool = multiprocessing.Pool(processes=process_num)
+        pool_outputs = pool.map(atlas_based_aggragator, range(cycle_index * process_num,
+                                                              (cycle_index + 1) * process_num))
+        pool.close()
+        pool.join()
+
+        print 'Cycle index: ', cycle_index, 'Time cost: ', (datetime.datetime.now() - starttime)
+        starttime = datetime.datetime.now()
 
     rw_atlas_based_aggrator_result = connect_results()
     generate_rw_prob_result(rw_atlas_based_aggrator_result)

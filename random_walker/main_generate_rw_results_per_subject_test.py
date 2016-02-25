@@ -11,7 +11,7 @@ from skimage.segmentation import random_walker
 from configs import *
 
 SUBJECTS_SESSION_NUMBERS = 70
-ATLAS_NUM = 50 #1 - 202
+ATLAS_NUM = 202 #1 - 202
 
 #Global varibale
 image = nib.load(ACTIVATION_DATA_DIR)
@@ -66,7 +66,11 @@ def process_single_subject(subject_index):
         markers = np.zeros_like(image[..., subject_index])
         atlas_roi_mask = np.logical_and(atlas_data == 1, thin_foreground_image[..., subject_index] == 1)
         atlas_roi_mask = np.logical_and(atlas_roi_mask, more_than_2_3_mask)
-        if atlas_roi_mask.sum() <= 0:
+
+        if atlas_roi_mask.sum() == 0:
+            atlas_roi_mask = np.logical_and(r_OFA_mask, more_than_2_3_mask)
+
+        if atlas_roi_mask.sum() == 0:
             r_OFA_flag = True
         else:
             markers[atlas_roi_mask] = 1
@@ -74,7 +78,11 @@ def process_single_subject(subject_index):
         #--------------r_pFus-------------
         atlas_roi_mask = np.logical_and(atlas_data == 3, thin_foreground_image[..., subject_index] == 1)
         atlas_roi_mask = np.logical_and(atlas_roi_mask, more_than_2_3_mask)
-        if atlas_roi_mask.sum() <= 0:
+
+        if atlas_roi_mask.sum() == 0:
+            atlas_roi_mask = np.logical_and(r_pFus_mask, more_than_2_3_mask)
+
+        if atlas_roi_mask.sum() == 0:
             r_pFus_flag = True
         else:
             markers[atlas_roi_mask] = 2
@@ -115,7 +123,11 @@ def process_single_subject(subject_index):
 
         atlas_roi_mask = np.logical_and(atlas_data == 2, thin_foreground_image[..., subject_index] == 1)
         atlas_roi_mask = np.logical_and(atlas_roi_mask, more_than_2_3_mask)
-        if atlas_roi_mask.sum() <= 0:
+
+        if atlas_roi_mask.sum() == 0:
+            atlas_roi_mask = np.logical_and(l_OFA_mask, more_than_2_3_mask)
+
+        if atlas_roi_mask.sum() == 0:
             l_OFA_flag = True
         else:
             markers[atlas_roi_mask] = 1
@@ -123,15 +135,14 @@ def process_single_subject(subject_index):
         #-------------------l_pFus-------------------
         atlas_roi_mask = np.logical_and(atlas_data == 4, thin_foreground_image[..., subject_index] == 1)
         atlas_roi_mask = np.logical_and(atlas_roi_mask, more_than_2_3_mask)
-        if atlas_roi_mask.sum() <= 0:
+
+        if atlas_roi_mask.sum() == 0:
+            atlas_roi_mask = np.logical_and(l_pFus_mask, more_than_2_3_mask)
+
+        if atlas_roi_mask.sum() == 0:
             l_pFus_flag = True
         else:
             markers[atlas_roi_mask] = 2
-
-        back_image = image[np.logical_and(left_barin_mask, thin_background_image[..., subject_index] == 1), subject_index]
-        # back_threshold = np.sort(back_image)[DEFAULT_BACKGROUND_THR]
-
-        # markers[np.logical_and(image[..., subject_index] < back_threshold, thin_background_image[..., subject_index] == 1)] = 3
 
         if l_OFA_flag and l_pFus_flag:
             #All markers are empty.
