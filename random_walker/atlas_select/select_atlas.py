@@ -6,6 +6,7 @@ import nibabel as nib
 import csv
 
 from configs import *
+from nipype.interfaces.nipy.utils import Similarity
 
 TOP_RANK = 30 # 0 - 100
 ATLAS_NUM = 202
@@ -35,20 +36,44 @@ left_right_brain_mask_list = [left_brain_mask, right_brain_mask]
 LEFT_RIGHT_BRAIN_NAME = ['left_brain', 'right_brain']
 
 
+def compute_similarity(volume1_filepath, volume2_filepath, mask_file_path, metric='nmi'):
+    similarity = Similarity()
+    similarity.inputs.volume1 = volume1_filepath
+    similarity.inputs.volume2 = volume2_filepath
+    similarity.inputs.mask1 = mask_file_path
+    similarity.inputs.mask2 = mask_file_path
+    similarity.inputs.metric = metric
+    res = similarity.run()
+
+    print 'Similarity: ', res
+
 def generate_atlas_top_index_per_roi(all_image_data):
     for i in range(image.shape[3]):
         for roi_index in range(len(ROI)):
             writer = csv.writer(file(ATLAS_TOP_DIR + ROI[roi_index] + '_' + str(i) + '_top_sort.csv', 'wb'))
             writer.writerow(['index', 'similarity'])
 
-            vector1 = image[roi_mask_list[roi_index], i] > IMAGE_THRESHOLD
+            # vector1 = image[roi_mask_list[roi_index], i] > IMAGE_THRESHOLD
             simility_vals = np.zeros((all_image_data.shape[3]))
             for j in range(all_image_data.shape[3]):
-                vector2 = all_image_data[roi_mask_list[roi_index], j] > IMAGE_THRESHOLD
-                inter_mask = np.logical_or(vector1, vector2)
+                # vector2 = all_image_data[roi_mask_list[roi_index], j] > IMAGE_THRESHOLD
+                # inter_mask = np.logical_or(vector1, vector2)
+                #
+                # print 'inter_mask.sum(): ', inter_mask.sum()
+                # simility_vals[j] = 0.5 + 0.5 * np.corrcoef(vector1[inter_mask], vector2[inter_mask])[0, 1]
 
-                print 'inter_mask.sum(): ', inter_mask.sum()
-                simility_vals[j] = 0.5 + 0.5 * np.corrcoef(vector1[inter_mask], vector2[inter_mask])[0, 1]
+                volume1 = image[..., i]
+                volume2 = all_image_data[..., j]
+                mask = roi_mask_list[roi_index]
+                mask[mask] = 1
+                nib.save(nib.Nifti1Image(volume1, affine), RW_AGGRAGATOR_RESULT_DATA_DIR +'volume1.nii.gz')
+                nib.save(nib.Nifti1Image(volume2, affine), RW_AGGRAGATOR_RESULT_DATA_DIR +'volume2.nii.gz')
+                nib.save(nib.Nifti1Image(mask.astype(int), affine), RW_AGGRAGATOR_RESULT_DATA_DIR +'mask.nii.gz')
+
+                simility_vals[j] = compute_similarity(RW_AGGRAGATOR_RESULT_DATA_DIR +'volume1.nii.gz',
+                                                      RW_AGGRAGATOR_RESULT_DATA_DIR +'volume2.nii.gz',
+                                                      RW_AGGRAGATOR_RESULT_DATA_DIR +'mask.nii.gz')
+
                 print 'i: ', i, '   roi_index: ', roi_index, ' j: ', j, '   simility_vals[j]: ',  simility_vals[j]
 
             index = np.argsort(-simility_vals)
@@ -65,6 +90,7 @@ def generate_atlas_top_index_per_roi(all_image_data):
 
             for k in range(index.shape[0]):
                 writer.writerow([index[k], round(simility_vals[index[k]], 4)])
+
 
 
 def generate_atlas_top_index_half_brain(all_image_data):

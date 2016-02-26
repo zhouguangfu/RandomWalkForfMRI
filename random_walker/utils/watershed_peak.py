@@ -77,7 +77,7 @@ def compute_atlas_rois_center_id():
 
         cords = np.asarray(np.nonzero(result))
         x_mean, ymean, z_mean = cords[0].mean(), cords[1].mean(), cords[2].mean()
-        print ROI[roi_index], '=> x_mean, ymean, z_mean : ',x_mean, ymean, z_mean
+        # print ROI[roi_index], '=> x_mean, ymean, z_mean : ',x_mean, ymean, z_mean
         rois_center_cords.append((x_mean, ymean, z_mean))
 
     return rois_center_cords
@@ -149,23 +149,30 @@ if __name__ == "__main__":
         peak_point_result[r_OFA_peak_points[0], r_OFA_peak_points[1], r_OFA_peak_points[2], subject_index] = 1
         peak_point_result[r_FFA_peak_points[0], r_FFA_peak_points[1], r_FFA_peak_points[2], subject_index] = 3
 
-        #Draw sphere.
+        # #Draw sphere.
         center_data = np.zeros_like(temp)
         center_data = peak_point_result[..., subject_index]
         coord_list, value_list = nonzero_coord(center_data)
         data = center_data.copy()
         for idx in range(len(coord_list)):
-            data = sphere_roi(data,
+            # data = sphere_roi(data,
+            #                   coord_list[idx][0],
+            #                   coord_list[idx][1],
+            #                   coord_list[idx][2],
+            #                   [2, 2, 2],
+            #                   value_list[idx])
+            data = cube_roi(data,
                               coord_list[idx][0],
                               coord_list[idx][1],
                               coord_list[idx][2],
-                              [3, 3, 3],
+                              [1, 1, 1],
                               value_list[idx])
         peak_point_result[..., subject_index] = data
+        print (peak_point_result[..., subject_index] == 1).sum()
 
         print 'Peak point, subject_index => ', subject_index
 
-    nib.save(nib.Nifti1Image(peak_point_result, affine), RW_AGGRAGATOR_RESULT_DATA_DIR  +  'a_peak_points_result.nii.gz')
+    nib.save(nib.Nifti1Image(peak_point_result, affine), RW_AGGRAGATOR_RESULT_DATA_DIR  +  '_peak_points_result.nii.gz')
     print RW_AGGRAGATOR_RESULT_DATA_DIR  +  'a_peak_points_result.nii.gz'
 
 
