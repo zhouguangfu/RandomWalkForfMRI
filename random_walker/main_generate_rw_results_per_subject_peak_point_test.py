@@ -23,21 +23,27 @@ all_202_image_data = nib.load(ALL_202_SUBJECTS_DATA_DIR).get_data()
 
 #Process subject data.
 def process_subjects():
-    r_FFA_result = np.zeros((complete_atlas_data.shape[0], complete_atlas_data.shape[1], complete_atlas_data.shape[2]))
+    #Compute ROI mean x, y, z cordinates
+    for roi_index in range(len(ROI)):
+        result = np.zeros((complete_atlas_data.shape[0], complete_atlas_data.shape[1], complete_atlas_data.shape[2]))
+        for i in range(complete_atlas_data.shape[3]):
+            mask = complete_atlas_data[..., i]
+            temp = np.zeros_like(result)
+            temp[mask == (roi_index + 1)] = all_202_image_data[mask == (roi_index + 1), i]
+            peak_cord = np.unravel_index(temp.argmax(), temp.shape)
 
-    for i in range(complete_atlas_data.shape[3]):
-        mask = complete_atlas_data[..., i]
-        temp = np.zeros_like(r_FFA_result)
-        temp[mask == 3] = all_202_image_data[mask == 3, i]
-        peak_cord = np.unravel_index(temp.argmax(), temp.shape)
+            result[peak_cord[0], peak_cord[1], peak_cord[2]] = 1
 
-        r_FFA_result[peak_cord[0], peak_cord[1], peak_cord[2]] = i
+        cords = np.asarray(np.nonzero(result))
+        x_mean, ymean, z_mean = cords[0].mean(), cords[1].mean(), cords[2].mean()
+        print ROI[roi_index], '=> x_mean, ymean, z_mean : ', x_mean, ymean, z_mean
 
-        print 'subject_index: ', i
+# r_OFA => x_mean, ymean, z_mean :  23.5056818182 23.8977272727 29.4488636364
+# l_OFA => x_mean, ymean, z_mean :  64.9556962025 22.6708860759 29.5
+# r_pFus => x_mean, ymean, z_mean :  23.8323353293 36.5988023952 25.874251497
+# l_pFus => x_mean, ymean, z_mean :  64.7070063694 35.9044585987 25.8662420382
 
-    nib.save(nib.Nifti1Image(r_FFA_result, affine), RW_AGGRAGATOR_RESULT_DATA_DIR  +  'r_FFA_peak_test.nii.gz')
-
-
+    # nib.save(nib.Nifti1Image(r_FFA_result, affine), RW_AGGRAGATOR_RESULT_DATA_DIR  +  'r_OFA_peak_test.nii.gz')
 
 
 
