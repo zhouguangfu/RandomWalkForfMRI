@@ -27,10 +27,10 @@ def atlas_based_aggragator(subject_index):
     #
     # #Top atlas
     # for atlas_index in range(DEFAULT_TOP_RANK):
-    #     region_result_RW[single_subject_rw_regions[..., r_OFA_indexs[atlas_index]] == 1] = 1
-    #     region_result_RW[single_subject_rw_regions[..., l_OFA_indexs[atlas_index]] == 2] = 2
-    #     region_result_RW[single_subject_rw_regions[..., r_pFus_indexs[atlas_index]] == 3] = 3
-    #     region_result_RW[single_subject_rw_regions[..., l_pFus_indexs[atlas_index]] == 4] = 4
+    #     region_result_RW[single_subject_rw_regions[..., r_OFA_indexs[atlas_index]] == 1, atlas_index] = 1
+    #     region_result_RW[single_subject_rw_regions[..., l_OFA_indexs[atlas_index]] == 2, atlas_index] = 2
+    #     region_result_RW[single_subject_rw_regions[..., r_pFus_indexs[atlas_index]] == 3, atlas_index] = 3
+    #     region_result_RW[single_subject_rw_regions[..., l_pFus_indexs[atlas_index]] == 4, atlas_index] = 4
 
     #Use all atlases.
     region_result_RW = single_subject_rw_regions

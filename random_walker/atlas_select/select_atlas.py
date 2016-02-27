@@ -9,13 +9,12 @@ from configs import *
 from nipype.interfaces.nipy.utils import Similarity
 
 TOP_RANK = 30 # 0 - 100
-ATLAS_NUM = 202
-#Compute the similarity threshold.
-IMAGE_THRESHOLD = 0
+ATLAS_NUM = 30
 
 #global varibale
 all_202_label_data = nib.load(ATLAS_SUBJECTS_LABELS_DIR).get_data()
 all_202_image_data = nib.load(ALL_202_SUBJECTS_DATA_DIR).get_data()
+all_202_image_data[all_202_image_data < 0] = 0
 
 image = nib.load(ACTIVATION_DATA_DIR)
 affine = image.get_affine()
@@ -45,17 +44,19 @@ def compute_similarity(volume1_filepath, volume2_filepath, mask_file_path, metri
     similarity.inputs.metric = metric
     res = similarity.run()
 
-    print 'Similarity: ', res
+    return  res.outputs.similarity
 
 def generate_atlas_top_index_per_roi(all_image_data):
+    global all_202_image_data
+
     for i in range(image.shape[3]):
         for roi_index in range(len(ROI)):
             writer = csv.writer(file(ATLAS_TOP_DIR + ROI[roi_index] + '_' + str(i) + '_top_sort.csv', 'wb'))
             writer.writerow(['index', 'similarity'])
 
             # vector1 = image[roi_mask_list[roi_index], i] > IMAGE_THRESHOLD
-            simility_vals = np.zeros((all_image_data.shape[3]))
-            for j in range(all_image_data.shape[3]):
+            simility_vals = np.zeros((ATLAS_NUM))
+            for j in range(ATLAS_NUM):
                 # vector2 = all_image_data[roi_mask_list[roi_index], j] > IMAGE_THRESHOLD
                 # inter_mask = np.logical_or(vector1, vector2)
                 #
@@ -92,21 +93,30 @@ def generate_atlas_top_index_per_roi(all_image_data):
                 writer.writerow([index[k], round(simility_vals[index[k]], 4)])
 
 
-
 def generate_atlas_top_index_half_brain(all_image_data):
     for i in range(image.shape[3]):
         for half_brain_index in range(len(LEFT_RIGHT_BRAIN_NAME)):
             writer = csv.writer(file(ATLAS_TOP_DIR + LEFT_RIGHT_BRAIN_NAME[half_brain_index] + '_' + str(i) + '_top_sort.csv', 'wb'))
             writer.writerow(['index', 'similarity'])
 
-            vector1 = image[left_right_brain_mask_list[half_brain_index], i] > IMAGE_THRESHOLD
-            simility_vals = np.zeros((all_image_data.shape[3]))
-            for j in range(all_image_data.shape[3]):
-                vector2 = all_image_data[left_right_brain_mask_list[half_brain_index], j] > IMAGE_THRESHOLD
-                inter_mask = np.logical_or(vector1, vector2)
+            # vector1 = image[left_right_brain_mask_list[half_brain_index], i] > IMAGE_THRESHOLD
+            simility_vals = np.zeros((ATLAS_NUM))
+            for j in range(ATLAS_NUM):
+                # vector2 = all_image_data[left_right_brain_mask_list[half_brain_index], j] > IMAGE_THRESHOLD
+                # inter_mask = np.logical_or(vector1, vector2)
 
-                print 'inter_mask.sum(): ', inter_mask.sum()
-                simility_vals[j] = 0.5 + 0.5 * np.corrcoef(vector1[inter_mask], vector2[inter_mask])[0, 1]
+                volume1 = image[..., i]
+                volume2 = all_image_data[..., j]
+                mask = left_right_brain_mask_list[half_brain_index]
+                mask[mask] = 1
+                nib.save(nib.Nifti1Image(volume1, affine), RW_AGGRAGATOR_RESULT_DATA_DIR +'volume1.nii.gz')
+                nib.save(nib.Nifti1Image(volume2, affine), RW_AGGRAGATOR_RESULT_DATA_DIR +'volume2.nii.gz')
+                nib.save(nib.Nifti1Image(mask.astype(int), affine), RW_AGGRAGATOR_RESULT_DATA_DIR +'mask.nii.gz')
+
+                simility_vals[j] = compute_similarity(RW_AGGRAGATOR_RESULT_DATA_DIR +'volume1.nii.gz',
+                                                      RW_AGGRAGATOR_RESULT_DATA_DIR +'volume2.nii.gz',
+                                                      RW_AGGRAGATOR_RESULT_DATA_DIR +'mask.nii.gz')
+                # simility_vals[j] = 0.5 + 0.5 * np.corrcoef(vector1[inter_mask], vector2[inter_mask])[0, 1]
                 print 'i: ', i, '   half_brain_index: ', half_brain_index, ' j: ', j, '  simility_vals[j]: ', simility_vals[j]
 
             index = np.argsort(-simility_vals)
@@ -124,13 +134,56 @@ def generate_atlas_top_index_half_brain(all_image_data):
             for k in range(index.shape[0]):
                 writer.writerow([index[k], round(simility_vals[index[k]], 4)])
 
+
+def generate_atlas_top_index_half_brain(subject_index):
+    for half_brain_index in range(len(LEFT_RIGHT_BRAIN_NAME)):
+        writer = csv.writer(file(ATLAS_TOP_DIR + LEFT_RIGHT_BRAIN_NAME[half_brain_index] + '_' + str(i) + '_top_sort.csv', 'wb'))
+        writer.writerow(['index', 'similarity'])
+
+        # vector1 = image[left_right_brain_mask_list[half_brain_index], i] > IMAGE_THRESHOLD
+        simility_vals = np.zeros((ATLAS_NUM))
+        for j in range(ATLAS_NUM):
+            # vector2 = all_image_data[left_right_brain_mask_list[half_brain_index], j] > IMAGE_THRESHOLD
+            # inter_mask = np.logical_or(vector1, vector2)
+
+            volume1 = image[..., subject_index]
+            volume2 = all_202_image_data[..., j]
+            mask = left_right_brain_mask_list[half_brain_index]
+            mask[mask] = 1
+            nib.save(nib.Nifti1Image(volume1, affine), RW_AGGRAGATOR_RESULT_DATA_DIR +'volume1.nii.gz')
+            nib.save(nib.Nifti1Image(volume2, affine), RW_AGGRAGATOR_RESULT_DATA_DIR +'volume2.nii.gz')
+            nib.save(nib.Nifti1Image(mask.astype(int), affine), RW_AGGRAGATOR_RESULT_DATA_DIR +'mask.nii.gz')
+
+            simility_vals[j] = compute_similarity(RW_AGGRAGATOR_RESULT_DATA_DIR +'volume1.nii.gz',
+                                                  RW_AGGRAGATOR_RESULT_DATA_DIR +'volume2.nii.gz',
+                                                  RW_AGGRAGATOR_RESULT_DATA_DIR +'mask.nii.gz')
+            # simility_vals[j] = 0.5 + 0.5 * np.corrcoef(vector1[inter_mask], vector2[inter_mask])[0, 1]
+            print 'i: ', subject_index, '   half_brain_index: ', half_brain_index, ' j: ', j, '  simility_vals[j]: ', simility_vals[j]
+
+        index = np.argsort(-simility_vals)
+        np.save(ATLAS_TOP_DIR + LEFT_RIGHT_BRAIN_NAME[half_brain_index] + '_' + str(i) + '_top_sort.npy', index)
+
+        left_right_brain_label_data = np.zeros((left_brain_mask.shape[0], left_brain_mask.shape[1], left_brain_mask.shape[2], TOP_RANK))
+        for top_index in range(TOP_RANK):
+            left_right_brain_label_data[..., top_index] = all_202_label_data[..., index[top_index]]
+            if (left_right_brain_label_data[..., top_index] == (half_brain_index + 1)).sum() <= 0:
+                print 'subject_index: ', i, '----roi_index: ', half_brain_index, '-- ',  ' top_index: ', top_index, '----------'
+
+        nib.save(nib.Nifti1Image(left_right_brain_label_data, affine), ATLAS_TOP_DIR + LEFT_RIGHT_BRAIN_NAME[half_brain_index] + '_' + str(i) +
+                                                                  '_top_rank_' + str(TOP_RANK) + '.nii.gz')
+
+        for k in range(index.shape[0]):
+            writer.writerow([index[k], round(simility_vals[index[k]], 4)])
+
+
+
 if __name__ == "__main__":
     starttime = datetime.datetime.now()
 
-    all_202_image_data[all_202_image_data < 0] = 0
-    generate_atlas_top_index_per_roi(all_202_image_data)
     # all_202_image_data[all_202_image_data < 0] = 0
-    # generate_atlas_top_index_half_brain(all_202_image_data)
+    # generate_atlas_top_index_per_roi(all_202_image_data)
+    all_202_image_data[all_202_image_data < 0] = 0
+    generate_atlas_top_index_half_brain(all_202_image_data)
 
     endtime = datetime.datetime.now()
     print 'Time cost: ', (endtime - starttime)

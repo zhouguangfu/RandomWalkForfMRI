@@ -5,14 +5,54 @@ import nibabel as nib
 from configs import *
 import datetime
 import os
+import csv
 import multiprocessing
 
 image = nib.load(ACTIVATION_DATA_DIR)
 affine = image.get_affine()
 image = image.get_data()
 
-DEFAULT_TOP_RANK = 10
+DEFAULT_TOP_RANK = 30
 SESSION_NUMBERS = 7
+
+left_brain_mask = nib.load(PROB_ROI_202_SUB_FILE + 'prob_left_brain.nii.gz').get_data() > 0
+right_brain_mask = nib.load(PROB_ROI_202_SUB_FILE + 'prob_right_brain.nii.gz').get_data() > 0
+
+LEFT_RIGHT_BRAIN_NAME = ['left_brain', 'right_brain']
+
+# def get_similarity(subject_index, roi_index):
+#     similarities = np.zeros((DEFAULT_TOP_RANK, )).astype(np.float)
+#     reader = csv.reader(file(ATLAS_TOP_DIR + ROI[roi_index] + '_' + str(subject_index) + '_top_sort.csv'))
+#     cnt = 0
+#     for index, similarity in reader:
+#         if index == 'index':
+#             continue
+#         elif cnt == DEFAULT_TOP_RANK:
+#             break
+#
+#         similarities[cnt] = float(similarity)
+#         cnt += 1
+#         # print 'index: ', cnt, '  similarity: ', similarity
+#
+#     return similarities
+
+
+def get_similarity(subject_index, half_brain_index):
+    similarities = np.zeros((DEFAULT_TOP_RANK, )).astype(np.float)
+    reader = csv.reader(file(ATLAS_TOP_DIR + LEFT_RIGHT_BRAIN_NAME[half_brain_index] + '_' +
+                             str(subject_index) + '_top_sort.csv'))
+    cnt = 0
+    for index, similarity in reader:
+        if index == 'index':
+            continue
+        elif cnt == DEFAULT_TOP_RANK:
+            break
+
+        similarities[cnt] = float(similarity)
+        cnt += 1
+        # print 'index: ', cnt, '  similarity: ', similarity
+
+    return similarities
 
 #Aggragator the result
 def atlas_based_aggragator(subject_index):
@@ -20,45 +60,99 @@ def atlas_based_aggragator(subject_index):
     single_subject_rw_regions = nib.load(RW_AGGRAGATOR_RESULT_DATA_DIR + 'subjects_rw_all_atlas_results/' +
                                          str(subject_index) + '_regions_rw.nii.gz').get_data()
 
-    r_OFA_indexs =  np.load(ATLAS_TOP_DIR + ROI[0] + '_' + str(subject_index) + '_top_sort.npy')
-    l_OFA_indexs =  np.load(ATLAS_TOP_DIR + ROI[1] + '_' + str(subject_index) + '_top_sort.npy')
-    r_pFus_indexs =  np.load(ATLAS_TOP_DIR + ROI[2] + '_' + str(subject_index) + '_top_sort.npy')
-    l_pFus_indexs =  np.load(ATLAS_TOP_DIR + ROI[3] + '_' + str(subject_index) + '_top_sort.npy')
+    left_brain_indexs = np.load(ATLAS_TOP_DIR + LEFT_RIGHT_BRAIN_NAME[0] + '_' + str(subject_index) + '_top_sort.npy')
+    right_brain_indexs = np.load(ATLAS_TOP_DIR + LEFT_RIGHT_BRAIN_NAME[0] + '_' + str(subject_index) + '_top_sort.npy')
 
     #Top atlas
     for atlas_index in range(DEFAULT_TOP_RANK):
-        region_result_RW[single_subject_rw_regions[..., r_OFA_indexs[atlas_index]] == 1] = 1
-        region_result_RW[single_subject_rw_regions[..., l_OFA_indexs[atlas_index]] == 2] = 2
-        region_result_RW[single_subject_rw_regions[..., r_pFus_indexs[atlas_index]] == 3] = 3
-        region_result_RW[single_subject_rw_regions[..., l_pFus_indexs[atlas_index]] == 4] = 4
+        region_result_RW[single_subject_rw_regions[..., left_brain_indexs[atlas_index]] == 1, atlas_index] = 1
+        region_result_RW[single_subject_rw_regions[..., right_brain_indexs[atlas_index]] == 2, atlas_index] = 2
+        region_result_RW[single_subject_rw_regions[..., left_brain_indexs[atlas_index]] == 3, atlas_index] = 3
+        region_result_RW[single_subject_rw_regions[..., right_brain_indexs[atlas_index]] == 4, atlas_index] = 4
 
     # #Use all atlases.
     # region_result_RW = single_subject_rw_regions
 
-    weight = np.ones(DEFAULT_TOP_RANK, dtype=float)
+    left_brain_similaities = get_similarity(subject_index, 0)
+    right_brain_similaities = get_similarity(subject_index, 1)
+    left_brain_similaities_weight = left_brain_similaities / left_brain_similaities.sum()
+    right_brain_similaities_weight = right_brain_similaities / right_brain_similaities.sum()
 
-    for roi_index in range(len(ROI) + 1):
-        temp = np.zeros_like(region_result_RW)
-        temp[region_result_RW == (roi_index + 1)] = 1
+    #r_OFA
+    temp = np.zeros_like(region_result_RW)
+    temp[region_result_RW == 1] = 1
 
-        for i in range(temp.shape[3]):
-            temp_data = temp[..., i].copy()
-            if roi_index == len(ROI):
-                temp[temp_data == 1, i] = (image[temp_data == 1, subject_index].max() - image[temp_data == 1, subject_index]) /\
-                                          (image[temp_data == 1, subject_index].max() -image[temp_data == 1, subject_index].min())
-            else:
-                temp[temp_data == 1, i] = (image[temp_data == 1, subject_index] -image[temp_data == 1, subject_index].min()) /\
-                                          (image[temp_data == 1, subject_index].max() - image[temp_data == 1, subject_index].min())
+    weighted_result = np.average(temp, axis=3, weights=left_brain_similaities_weight)
+    nib.save(nib.Nifti1Image(weighted_result, affine), RW_AGGRAGATOR_RESULT_DATA_DIR +
+                                ROI[0] + '_' + str(subject_index) + '_non_weight.nii.gz')
 
-        weighted_result = np.average(temp, axis=3, weights=weight)
+    #r_FFA
+    temp = np.zeros_like(region_result_RW)
+    temp[region_result_RW == 3] = 1
 
-        if roi_index < len(ROI):
-            nib.save(nib.Nifti1Image(weighted_result, affine), RW_AGGRAGATOR_RESULT_DATA_DIR +
-                                ROI[roi_index] + '_' + str(subject_index) + '_non_weight.nii.gz')
-        else:
-            nib.save(nib.Nifti1Image(weighted_result, affine), RW_AGGRAGATOR_RESULT_DATA_DIR +
+    weighted_result = np.average(temp, axis=3, weights=left_brain_similaities_weight)
+    nib.save(nib.Nifti1Image(weighted_result, affine), RW_AGGRAGATOR_RESULT_DATA_DIR +
+                                ROI[2] + '_' + str(subject_index) + '_non_weight.nii.gz')
+
+    #r_background
+    r_bg_temp = np.zeros_like(region_result_RW)
+    r_bg_temp[region_result_RW == 5] = 1
+    r_bg_temp[left_brain_mask, :] = 0
+
+    r_bg_weighted_result = np.average(r_bg_temp, axis=3, weights=left_brain_similaities_weight)
+
+    #----------------------------------
+    #l_OFA
+    temp = np.zeros_like(region_result_RW)
+    temp[region_result_RW == 2] = 1
+
+    weighted_result = np.average(temp, axis=3, weights=right_brain_similaities_weight)
+    nib.save(nib.Nifti1Image(weighted_result, affine), RW_AGGRAGATOR_RESULT_DATA_DIR +
+                                ROI[1] + '_' + str(subject_index) + '_non_weight.nii.gz')
+
+    #l_FFA
+    temp = np.zeros_like(region_result_RW)
+    temp[region_result_RW == 4] = 1
+
+    weighted_result = np.average(temp, axis=3, weights=right_brain_similaities_weight)
+    nib.save(nib.Nifti1Image(weighted_result, affine), RW_AGGRAGATOR_RESULT_DATA_DIR +
+                                ROI[3] + '_' + str(subject_index) + '_non_weight.nii.gz')
+    #l_background
+    l_bg_temp = np.zeros_like(region_result_RW)
+    l_bg_temp[region_result_RW == 5] = 1
+    l_bg_temp[right_brain_mask, :] = 0
+
+    l_bg_weighted_result = np.average(l_bg_temp, axis=3, weights=right_brain_similaities_weight)
+
+    bg_weighted_result = r_bg_weighted_result + l_bg_weighted_result
+    nib.save(nib.Nifti1Image(bg_weighted_result, affine), RW_AGGRAGATOR_RESULT_DATA_DIR +
                                 'background_' + str(subject_index) + '_non_weight.nii.gz')
-        print 'subject_index: ', subject_index, '   roi_index: ', roi_index
+
+    # for roi_index in range(len(ROI) + 1):
+    #     temp = np.zeros_like(region_result_RW)
+    #     temp[region_result_RW == (roi_index + 1)] = 1
+    #
+    #     for i in range(temp.shape[3]):
+    #         temp_data = temp[..., i].copy()
+    #         if (temp_data == 1).sum() == 0:
+    #             continue
+    #
+    #         if roi_index == len(ROI):
+    #             temp[temp_data == 1, i] = (image[temp_data == 1, subject_index].max() - image[temp_data == 1, subject_index]) /\
+    #                                       (image[temp_data == 1, subject_index].max() -image[temp_data == 1, subject_index].min())
+    #         else:
+    #             temp[temp_data == 1, i] = (image[temp_data == 1, subject_index] -image[temp_data == 1, subject_index].min()) /\
+    #                                       (image[temp_data == 1, subject_index].max() - image[temp_data == 1, subject_index].min())
+    #
+    #     weighted_result = np.average(temp, axis=3, weights=weight)
+    #
+    #     if roi_index < len(ROI):
+    #         nib.save(nib.Nifti1Image(weighted_result, affine), RW_AGGRAGATOR_RESULT_DATA_DIR +
+    #                             ROI[roi_index] + '_' + str(subject_index) + '_non_weight.nii.gz')
+    #     else:
+    #         nib.save(nib.Nifti1Image(weighted_result, affine), RW_AGGRAGATOR_RESULT_DATA_DIR +
+    #                             'background_' + str(subject_index) + '_non_weight.nii.gz')
+    print 'subject_index: ', subject_index
 
 def connect_results():
     rw_atlas_based_aggrator_results = np.zeros((image.shape[0], image.shape[1], image.shape[2], image.shape[3], len(ROI) + 1))
@@ -75,8 +169,7 @@ def connect_results():
         else:
             for i in range(image.shape[3]):
                 rw_atlas_based_aggrator_result[..., i] = \
-                    nib.load(RW_AGGRAGATOR_RESULT_DATA_DIR + 'subjects_rw_all_atlas_results' + '/background_' +
-                             str(i)+ '_non_weight.nii.gz').get_data()
+                    nib.load(RW_AGGRAGATOR_RESULT_DATA_DIR +'/background_' + str(i)+ '_non_weight.nii.gz').get_data()
 
             nib.save(nib.Nifti1Image(rw_atlas_based_aggrator_result, affine),
                      RW_AGGRAGATOR_RESULT_DATA_DIR + 'rw/' + 'background_non_weight.nii.gz')
@@ -116,7 +209,7 @@ if __name__ == "__main__":
     # for subject_index in range(image.shape[3]):
     #     atlas_based_aggragator(subject_index)
 
-    process_num = 14
+    process_num = 5
     for cycle_index in range(image.shape[3] / process_num):
         pool = multiprocessing.Pool(processes=process_num)
         pool_outputs = pool.map(atlas_based_aggragator, range(cycle_index * process_num,
