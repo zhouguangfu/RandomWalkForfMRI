@@ -4,6 +4,7 @@ import datetime
 import numpy as np
 import nibabel as nib
 import csv
+import multiprocessing
 
 from configs import *
 from nipype.interfaces.nipy.utils import Similarity
@@ -92,7 +93,6 @@ def generate_atlas_top_index_per_roi(all_image_data):
             for k in range(index.shape[0]):
                 writer.writerow([index[k], round(simility_vals[index[k]], 4)])
 
-
 def generate_atlas_top_index_half_brain(all_image_data):
     for i in range(image.shape[3]):
         for half_brain_index in range(len(LEFT_RIGHT_BRAIN_NAME)):
@@ -137,7 +137,8 @@ def generate_atlas_top_index_half_brain(all_image_data):
 
 def generate_atlas_top_index_half_brain(subject_index):
     for half_brain_index in range(len(LEFT_RIGHT_BRAIN_NAME)):
-        writer = csv.writer(file(ATLAS_TOP_DIR + LEFT_RIGHT_BRAIN_NAME[half_brain_index] + '_' + str(i) + '_top_sort.csv', 'wb'))
+        writer = csv.writer(file(ATLAS_TOP_DIR + LEFT_RIGHT_BRAIN_NAME[half_brain_index] + '_' +
+                                 str(subject_index) + '_top_sort.csv', 'wb'))
         writer.writerow(['index', 'similarity'])
 
         # vector1 = image[left_right_brain_mask_list[half_brain_index], i] > IMAGE_THRESHOLD
@@ -158,19 +159,22 @@ def generate_atlas_top_index_half_brain(subject_index):
                                                   RW_AGGRAGATOR_RESULT_DATA_DIR +'volume2.nii.gz',
                                                   RW_AGGRAGATOR_RESULT_DATA_DIR +'mask.nii.gz')
             # simility_vals[j] = 0.5 + 0.5 * np.corrcoef(vector1[inter_mask], vector2[inter_mask])[0, 1]
-            print 'i: ', subject_index, '   half_brain_index: ', half_brain_index, ' j: ', j, '  simility_vals[j]: ', simility_vals[j]
+            print 'i: ', subject_index, '  simility_vals[j]: ', simility_vals[j]
 
         index = np.argsort(-simility_vals)
-        np.save(ATLAS_TOP_DIR + LEFT_RIGHT_BRAIN_NAME[half_brain_index] + '_' + str(i) + '_top_sort.npy', index)
+        np.save(ATLAS_TOP_DIR + LEFT_RIGHT_BRAIN_NAME[half_brain_index] + '_' + str(subject_index) + '_top_sort.npy', index)
 
-        left_right_brain_label_data = np.zeros((left_brain_mask.shape[0], left_brain_mask.shape[1], left_brain_mask.shape[2], TOP_RANK))
+        left_right_brain_label_data = np.zeros((left_brain_mask.shape[0],
+                                                left_brain_mask.shape[1],
+                                                left_brain_mask.shape[2],
+                                                TOP_RANK))
         for top_index in range(TOP_RANK):
             left_right_brain_label_data[..., top_index] = all_202_label_data[..., index[top_index]]
             if (left_right_brain_label_data[..., top_index] == (half_brain_index + 1)).sum() <= 0:
-                print 'subject_index: ', i, '----roi_index: ', half_brain_index, '-- ',  ' top_index: ', top_index, '----------'
+                print 'subject_index: ', subject_index, '-- ',  ' top_index: ', top_index, '----------'
 
-        nib.save(nib.Nifti1Image(left_right_brain_label_data, affine), ATLAS_TOP_DIR + LEFT_RIGHT_BRAIN_NAME[half_brain_index] + '_' + str(i) +
-                                                                  '_top_rank_' + str(TOP_RANK) + '.nii.gz')
+        nib.save(nib.Nifti1Image(left_right_brain_label_data, affine), ATLAS_TOP_DIR +
+                 LEFT_RIGHT_BRAIN_NAME[half_brain_index] + '_' + str(subject_index) + '_top_rank_' + str(TOP_RANK) + '.nii.gz')
 
         for k in range(index.shape[0]):
             writer.writerow([index[k], round(simility_vals[index[k]], 4)])
@@ -179,11 +183,21 @@ def generate_atlas_top_index_half_brain(subject_index):
 
 if __name__ == "__main__":
     starttime = datetime.datetime.now()
-
-    # all_202_image_data[all_202_image_data < 0] = 0
     # generate_atlas_top_index_per_roi(all_202_image_data)
-    all_202_image_data[all_202_image_data < 0] = 0
-    generate_atlas_top_index_half_brain(all_202_image_data)
+
+    # for i in range(image.shape[3]):
+    #     generate_atlas_top_index_half_brain()
+
+    process_num = 14
+    for cycle_index in range(image.shape[3] / process_num):
+        pool = multiprocessing.Pool(processes=process_num)
+        pool_outputs = pool.map(generate_atlas_top_index_half_brain, range(cycle_index * process_num,
+                                                              (cycle_index + 1) * process_num))
+        pool.close()
+        pool.join()
+
+        print 'Cycle index: ', cycle_index, 'Time cost: ', (datetime.datetime.now() - starttime)
+        starttime = datetime.datetime.now()
 
     endtime = datetime.datetime.now()
     print 'Time cost: ', (endtime - starttime)
