@@ -5,6 +5,7 @@ import multiprocessing
 import os
 
 import nibabel as nib
+import numpy as np
 
 from configs import *
 
@@ -25,7 +26,7 @@ crlIndexOfMaxComponent = '/nfs/j3/userhome/zhouguangfu/workingdir/crkit_build/in
 crlOverlapstats3d = '/nfs/j3/userhome/zhouguangfu/workingdir/crkit_build/install/bin/crlOverlapstats3d'
 
 
-ATLAS_NUM = 202
+ATLAS_NUM = 30
 SUBJECTS_SESSION_NUMBERS = 70
 
 image = nib.load(ACTIVATION_DATA_DIR)
@@ -37,20 +38,20 @@ def generate_single_subject_nii_volume(subject_index):
     all_subject_session_rw = nib.load(RW_AGGRAGATOR_RESULT_DATA_DIR + 'subjects_rw_all_atlas_results/' +
                                       str(subject_index) + '_regions_rw.nii.gz').get_data()
     all_file_path = ' '
-    rw_path = ANALYSIS_DIR + 'staple/rw/' + str(subject_index) + '/'
+    rw_path = RW_AGGRAGATOR_RESULT_DATA_DIR + 'staple/rw/' + str(subject_index) + '/'
     if not os.path.exists(rw_path):
         os.makedirs(rw_path)
 
     for atlas_index in range(ATLAS_NUM):
         nib.save(nib.Nifti1Image(all_subject_session_rw[..., atlas_index], affine), rw_path + str(atlas_index) + '_session.nii')
         all_file_path += ' ' + rw_path + str(atlas_index) + '_session.nii'
-        print 'Generate single subject session_nii_volume: ', atlas_index
+    print 'Generate single subject session_nii_volume: ', subject_index
 
     return all_file_path
 
 
 def random_walker_staple_analysis(subject_index):
-    rw_path = ANALYSIS_DIR + 'staple/rw/' + str(subject_index) + '/'
+    rw_path = RW_AGGRAGATOR_RESULT_DATA_DIR + 'staple/rw/' + str(subject_index) + '/'
     
     all_file_path = generate_single_subject_nii_volume(subject_index)
 
@@ -74,6 +75,16 @@ def random_walker_staple_analysis(subject_index):
     #         print 'Dice => atlas_index: ', atlas_index, '  roi_index: ', roi_index
     # rw_staple_dice_file.close()
 
+def generate_rw_prob_result():
+    temp_image = np.zeros_like(image).astype(np.int)
+
+    for subject_index in range(SUBJECTS_SESSION_NUMBERS):
+        rw_path = RW_AGGRAGATOR_RESULT_DATA_DIR + 'staple/rw/' + str(subject_index) + '/'
+        temp_image[..., subject_index] = nib.load(rw_path + 'maxinum_component.nii').get_data()
+
+    temp_image[temp_image == 5] = 0
+    nib.save(nib.Nifti1Image(temp_image, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + 'rw/' + RW_PROB_RESULT_FILE)
+
 
 if __name__ == "__main__":
     starttime = datetime.datetime.now()
@@ -83,7 +94,6 @@ if __name__ == "__main__":
     #     random_walker_staple_analysis(subject_index)
     #
     #     print 'Staple process => subject_index: ', subject_index
-
 
     #For multi process
     starttime = datetime.datetime.now()
@@ -98,6 +108,7 @@ if __name__ == "__main__":
         print 'Cycle index: ', cycle_index, 'Time cost: ', (datetime.datetime.now() - starttime)
         starttime = datetime.datetime.now()
 
+    generate_rw_prob_result()
     endtime = datetime.datetime.now()
     print 'Time cost: ', (endtime - starttime)
     print "Program end..."

@@ -62,12 +62,15 @@ def process_single_subject(subject_index):
         if atlas_roi_mask.sum() <= 0:
             atlas_roi_mask = np.logical_and(r_OFA_group_mask, thin_foreground_image[..., subject_index] == 1)
         markers[atlas_roi_mask] = 1
-
+        if (markers == 1).sum() == 0:
+            print '**********r_OFA*******', ' subject_index: ', subject_index, '   atlas_index: ', atlas_index
         #--------------r_pFus-------------
         atlas_roi_mask = np.logical_and(atlas_data == 3, thin_foreground_image[..., subject_index] == 1)
         if atlas_roi_mask.sum() <= 0:
             atlas_roi_mask = np.logical_and(r_pFus_group__mask, thin_foreground_image[..., subject_index] == 1)
         markers[atlas_roi_mask] = 2
+        if (markers == 2).sum() == 0:
+            print '*******r_pFus************', ' subject_index: ', subject_index, '   atlas_index: ', atlas_index
 
         back_image = image[np.logical_and(right_barin_mask, thin_background_image[..., subject_index] == 1), subject_index]
         # back_threshold = np.sort(back_image)[DEFAULT_BACKGROUND_THR]
@@ -79,7 +82,7 @@ def process_single_subject(subject_index):
         skeletonize_markers_RW[markers == 2] = 3
         skeletonize_markers_RW[markers == 3] = 5
 
-        rw_labels = random_walker(image[..., subject_index], markers, beta=10, mode='bf')
+        rw_labels = random_walker(image[..., subject_index], markers, beta=130, mode='bf')
         rw_labels[rw_labels == -1] = 0
         region_result_RW[rw_labels == 1] = 1
         region_result_RW[rw_labels == 2] = 3
@@ -96,6 +99,8 @@ def process_single_subject(subject_index):
         # fore_threshold = -np.sort(-fore_image)[30]
         # print 'subject index: ', subject_index, 'atlas_index: ', atlas_index, '   l_OFA size: ', atlas_roi_mask.sum()
         markers[atlas_roi_mask] = 1
+        if (markers == 1).sum() == 0:
+            print '**********l_OFA*********', ' subject_index: ', subject_index, '   atlas_index: ', atlas_index
 
         #-------------------l_pFus-------------------
         atlas_roi_mask = np.logical_and(atlas_data == 4, thin_foreground_image[..., subject_index] == 1)
@@ -107,6 +112,9 @@ def process_single_subject(subject_index):
         # print 'subject index: ', subject_index, 'atlas_index: ', atlas_index, '   l_pFus size: ', atlas_roi_mask.sum()
         markers[atlas_roi_mask] = 2
 
+        if (markers == 2).sum() == 0:
+            print '********l_pFus***********', ' subject_index: ', subject_index, '   atlas_index: ', atlas_index
+
         back_image = image[np.logical_and(left_barin_mask, thin_background_image[..., subject_index] == 1), subject_index]
         # back_threshold = np.sort(back_image)[DEFAULT_BACKGROUND_THR]
 
@@ -117,7 +125,7 @@ def process_single_subject(subject_index):
         skeletonize_markers_RW[markers == 2] = 4
         skeletonize_markers_RW[markers == 3] = 5
 
-        rw_labels = random_walker(image[..., subject_index], markers, beta=10, mode='bf')
+        rw_labels = random_walker(image[..., subject_index], markers, beta=130, mode='bf')
         rw_labels[rw_labels == -1] = 0
         region_result_RW[rw_labels == 1] = 2
         region_result_RW[rw_labels == 2] = 4
@@ -129,10 +137,10 @@ def process_single_subject(subject_index):
         print 'subject_index: ', subject_index, '   atlas_index: ', atlas_index
 
     # #Save the result
-    nib.save(nib.Nifti1Image(result_skeletonize_image, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
-                                                               '_markers_rw.nii.gz')
-    nib.save(nib.Nifti1Image(result_image, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
-                                                              '_regions_rw.nii.gz')
+    # nib.save(nib.Nifti1Image(result_skeletonize_image, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
+    #                                                            '_markers_rw.nii.gz')
+    # nib.save(nib.Nifti1Image(result_image, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
+    #                                                           '_regions_rw.nii.gz')
 
     print 'subject_index:', subject_index, 'atlas-based rw finished...'
 
@@ -157,7 +165,7 @@ if __name__ == "__main__":
     # #For single process
     # for subject_index in range(SUBJECTS_SESSION_NUMBERS):
     #     process_single_subject(subject_index)
-
+    # process_single_subject(16)
 
     #For multi process
     starttime = datetime.datetime.now()

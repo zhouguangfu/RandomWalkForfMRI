@@ -8,7 +8,7 @@ from docx import Document
 from docx.shared import Inches
 
 from configs import *
-from matplot_case.inter_subject_bar import show_barchart
+# from matplot_case.inter_subject_bar import show_barchart
 
 SUBJECT_SESSION_NUM = 7
 
@@ -39,14 +39,15 @@ def all_analysis(all_dices):
 
     xlabel = 'ROI'
     ylabel = 'Dice'
-    show_barchart(means, stds, xlabel, ylabel, title, COLOR, METHODS, ROI)
+    # show_barchart(means, stds, xlabel, ylabel, title, COLOR, METHODS, ROI)
 
-    document.add_picture(TEMP_IMG_DIR, width=Inches(6.0))
+    # document.add_picture(TEMP_IMG_DIR, width=Inches(6.0))
     document.add_paragraph('Mean of Optional Region Size:  ' + str(means), style='ListBullet')
     document.add_paragraph('Std of Optional Region Size:  ' + str(stds), style='ListBullet')
     document.save(ANALYSIS_DIR + 'All_Methods_' + RW_ATLAS_BASED_DOCX_RESULT_FILE)
 
     print 'all_analysis: ', '  means: ', means
+    return means
 
 def inter_subject_analysis(roi_dices, roi_index):
     dices = np.zeros((SUBJECT_SESSION_NUM * (SUBJECT_SESSION_NUM - 1) / 2, roi_dices[0].shape[2], len(roi_dices))).astype(np.float)
@@ -63,46 +64,25 @@ def inter_subject_analysis(roi_dices, roi_index):
 
     xlabel = 'Subject Name'
     ylabel = 'Dice'
-    show_barchart(means, stds, xlabel, ylabel, title, COLOR, METHODS, SUBJECT_NAMES)
+    # show_barchart(means, stds, xlabel, ylabel, title, COLOR, METHODS, SUBJECT_NAMES)
 
-    document.add_picture(TEMP_IMG_DIR, width=Inches(6.0))
+    # document.add_picture(TEMP_IMG_DIR, width=Inches(6.0))
     document.add_paragraph('Mean of Optional Region Size:  ' + str(means), style='ListBullet')
     document.add_paragraph('Std of Optional Region Size:  ' + str(stds), style='ListBullet')
     document.save(ANALYSIS_DIR + ROI[roi_index]+ '_Methods_' + RW_ATLAS_BASED_DOCX_RESULT_FILE)
-    print 'inter_subject_analysis: ', inter_subject_analysis, ' roi_index: ', ROI[roi_index]
+    print 'inter_subject_analysis: ', ' roi_index: ', ROI[roi_index]
     print 'means: ', means
 
-def manual(roi_index):
-    # all_subject_session_path = ANALYSIS_DIR + 'manual/' + ROI[roi_index] +  '_manual.nii.gz'
-    # all_subject_session = nib.load(all_subject_session_path).get_data()
+    return means
 
-    all_subject_session_path = ANALYSIS_DIR + 'manual/' + 'manual.nii.gz'
-    all_subject_session = nib.load(all_subject_session_path).get_data()
-    all_subject_session[all_subject_session != (roi_index + 1)] = 0
-    dices = compute_dice_matrix(all_subject_session)
-    return dices
-
-def gss(roi_index):
-    ROI = ['r_OFA', 'l_OFA', 'r_pFus', 'l_pFus']
-    all_subject_session_path = ANALYSIS_DIR + 'gss/' + ROI[roi_index] + '_gss.nii.gz'
-    all_subject_session = nib.load(all_subject_session_path).get_data()
-    dices = compute_dice_matrix(all_subject_session)
-    return dices
-
-# def ac_srg(roi_index):
-#     all_subject_session_path = ANALYSIS_DIR + 'asrg/' + ROI[roi_index] + '_' + AC_OPTIMAL_FILE
-#     all_subject_session = nib.load(all_subject_session_path).get_data()
-#     dices = compute_dice_matrix(all_subject_session)
-#     return dices
-
-def random_walker(roi_index):
+def random_walker(roi_index, rw_result_filepath):
     # all_subject_session_path = ANALYSIS_DIR + 'rsrg/' + ROI[roi_index] + '_' + '1000_rsrg.nii.gz'
     # all_subject_session_path = ANALYSIS_DIR + 'rw/' + str(roi_index + 1) + '_rw_result_file.nii.gz'
 
     # all_subject_session_path = ANALYSIS_DIR + 'rw/' + ROI[roi_index] + '_' + RW_PROB_RESULT_FILE
     # all_subject_session = nib.load(all_subject_session_path).get_data()
 
-    all_subject_session = (nib.load(ANALYSIS_DIR + 'rw_prob_result_file.nii.gz').get_data() == (roi_index + 1)).astype(np.int32)
+    all_subject_session = (nib.load(rw_result_filepath).get_data() == (roi_index + 1)).astype(np.int32)
 
     dices = compute_dice_matrix(all_subject_session)
     return dices
@@ -125,19 +105,34 @@ def compute_dice_matrix(all_subject_session):
 
 if __name__ == "__main__":
     starttime = datetime.datetime.now()
-    all_dices = []
-    for roi_index in range(0, len(ROI)):
-    # for roi_index in range(0, 1):
-        roi_dices = [manual(roi_index), gss(roi_index), random_walker(roi_index)]
-        inter_subject_analysis(roi_dices, roi_index)
-        all_dices.append(roi_dices)
-        print 'roi_index:', roi_index
-    all_analysis(all_dices)
 
+    stats_means = []
 
+    for i in range(15):
+        filepath = RW_AGGRAGATOR_RESULT_DATA_DIR + 'staple/rw/top_rank_' + str((i + 1) * 10) + '_' + RW_PROB_RESULT_FILE
+        # filepath_random = RW_AGGRAGATOR_RESULT_DATA_DIR + 'staple/rw/random_' + str(( i + 1) * 10) + '_' + RW_PROB_RESULT_FILE
+        # filepath = filepath_random
+        print 'filepath: ', filepath
+
+        all_dices = []
+        for roi_index in range(0, len(ROI)):
+        # for roi_index in range(0, 1):
+            roi_dices = [random_walker(roi_index, filepath)]
+            inter_subject_analysis(roi_dices, roi_index)
+            all_dices.append(roi_dices)
+            print 'roi_index:', roi_index
+        means = all_analysis(all_dices)
+        stats_means.append(means)
+        print '--------------------------------------- ', (i + 1) * 10, ' ----------------------------------------'
+
+    print stats_means
 
     endtime = datetime.datetime.now()
     print 'Time costs: ', (endtime - starttime)
     print "Program end..."
+
+
+
+
 
 

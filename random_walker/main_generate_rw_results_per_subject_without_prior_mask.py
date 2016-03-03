@@ -19,6 +19,7 @@ affine = image.get_affine()
 image = image.get_data()
 
 complete_atlas_data = nib.load(ATLAS_TOP_DIR + 'complete_atlas_label.nii.gz').get_data()
+
 left_barin_mask = nib.load(PROB_ROI_202_SUB_FILE + PROB_LEFT_BRAIN_FILE).get_data()
 right_barin_mask = nib.load(PROB_ROI_202_SUB_FILE + PROB_RIGHT_BRAIN_FILE).get_data()
 
@@ -31,18 +32,13 @@ l_OFA_mask = nib.load(PROB_ROI_202_SUB_FILE + 'l_OFA_prob.nii.gz').get_data() > 
 r_pFus_mask = nib.load(PROB_ROI_202_SUB_FILE + 'r_pFus_prob.nii.gz').get_data() > 0
 l_pFus_mask = nib.load(PROB_ROI_202_SUB_FILE + 'l_pFus_prob.nii.gz').get_data() > 0
 
-r_OFA_group_mask = nib.load(LABEL_ROI_202_SUB_FILE + 'r_OFA_label.nii.gz').get_data() > 0
-l_OFA_group_mask = nib.load(LABEL_ROI_202_SUB_FILE + 'l_OFA_label.nii.gz').get_data() > 0
-r_pFus_group__mask = nib.load(LABEL_ROI_202_SUB_FILE + 'r_pFus_label.nii.gz').get_data() > 0
-l_pFus_group_mask = nib.load(LABEL_ROI_202_SUB_FILE + 'l_pFus_label.nii.gz').get_data() > 0
-
 
 #Process subject data.
 def process_single_subject(subject_index):
     global image, complete_atlas_data, left_barin_mask, right_barin_mask
 
-    result_image = np.zeros_like(complete_atlas_data[..., 0: ATLAS_NUM])
-    result_skeletonize_image = np.zeros_like(complete_atlas_data[..., 0: ATLAS_NUM])
+    result_image = np.zeros_like(complete_atlas_data[..., 0 : ATLAS_NUM])
+    result_skeletonize_image = np.zeros_like(complete_atlas_data[..., 0 : ATLAS_NUM])
 
     for atlas_index in range(ATLAS_NUM):
         atlas_data = np.zeros_like(complete_atlas_data[..., 0])
@@ -56,18 +52,14 @@ def process_single_subject(subject_index):
         atlas_data[complete_atlas_data[..., atlas_index] == 4] = 4
 
         r_OFA_flag = False
-        r_pFus_flag = False
         l_OFA_flag = False
+        r_pFus_flag = False
         l_pFus_flag = False
 
         #********************************************* right brain process ********************************************
         #--------------r_OFA---------------
         markers = np.zeros_like(image[..., subject_index])
         atlas_roi_mask = np.logical_and(atlas_data == 1, thin_foreground_image[..., subject_index] == 1)
-
-        if atlas_roi_mask.sum() == 0:
-            atlas_roi_mask = np.logical_and(r_OFA_group_mask, thin_foreground_image[..., subject_index] == 1)
-
         if atlas_roi_mask.sum() == 0:
             r_OFA_flag = True
         else:
@@ -75,44 +67,40 @@ def process_single_subject(subject_index):
 
         #--------------r_pFus-------------
         atlas_roi_mask = np.logical_and(atlas_data == 3, thin_foreground_image[..., subject_index] == 1)
-
-        if atlas_roi_mask.sum() == 0:
-            atlas_roi_mask = np.logical_and(r_pFus_group__mask, thin_foreground_image[..., subject_index] == 1)
-
-        if atlas_roi_mask.sum() == 0:
+        if atlas_roi_mask.sum() <= 0:
             r_pFus_flag = True
         else:
             markers[atlas_roi_mask] = 2
 
+
         if r_OFA_flag and r_pFus_flag:
-            #All markers are empty.
-            pass
+            region_result_RW[right_barin_mask > 0] = 5
         elif r_OFA_flag:
             markers[markers == 2] = 1
             markers[thin_background_image[..., subject_index] == 1] = 2
-            # markers[right_barin_mask == False] = -1
-            markers[r_pFus_mask == False] = -1
-            rw_labels = random_walker(image[..., subject_index], markers, beta=10, mode='bf')
+            markers[right_barin_mask == False] = -1
+
+            rw_labels = random_walker(image[..., subject_index], markers, beta=130, mode='bf')
             region_result_RW[rw_labels == 1] = 3
             region_result_RW[rw_labels == 2] = 5
 
             skeletonize_markers_RW[markers == 1] = 3
             skeletonize_markers_RW[markers == 2] = 5
-
         elif r_pFus_flag:
             markers[thin_background_image[..., subject_index] == 1] = 2
-            # markers[right_barin_mask == False] = -1
-            markers[r_OFA_mask == False] = -1
-            rw_labels = random_walker(image[..., subject_index], markers, beta=10, mode='bf')
+            markers[right_barin_mask == False] = -1
+            rw_labels = random_walker(image[..., subject_index], markers, beta=130, mode='bf')
             region_result_RW[rw_labels == 1] = 1
             region_result_RW[rw_labels == 2] = 5
 
             skeletonize_markers_RW[markers == 1] = 1
             skeletonize_markers_RW[markers == 2] = 5
         else:
+            pass
             markers[thin_background_image[..., subject_index] == 1] = 3
             markers[right_barin_mask == False] = -1
-            rw_labels = random_walker(image[..., subject_index], markers, beta=10, mode='bf')
+
+            rw_labels = random_walker(image[..., subject_index], markers, beta=130, mode='bf')
             rw_labels[rw_labels == -1] = 0
             region_result_RW[rw_labels == 1] = 1
             region_result_RW[rw_labels == 2] = 3
@@ -122,51 +110,41 @@ def process_single_subject(subject_index):
             skeletonize_markers_RW[markers == 2] = 3
             skeletonize_markers_RW[markers == 3] = 5
 
+
+
         #********************************************* left brain process *********************************************
         #-------------------l_OFA--------------------
         markers = np.zeros_like(image[..., subject_index])
 
         atlas_roi_mask = np.logical_and(atlas_data == 2, thin_foreground_image[..., subject_index] == 1)
-
-        if atlas_roi_mask.sum() == 0:
-            atlas_roi_mask = np.logical_and(l_OFA_group_mask, thin_foreground_image[..., subject_index] == 1)
-
-        if atlas_roi_mask.sum() == 0:
+        if atlas_roi_mask.sum() <= 0:
             l_OFA_flag = True
         else:
             markers[atlas_roi_mask] = 1
-
-        #-------------------l_pFus-------------------
+         #-------------------l_pFus-------------------
         atlas_roi_mask = np.logical_and(atlas_data == 4, thin_foreground_image[..., subject_index] == 1)
-
-        if atlas_roi_mask.sum() == 0:
-            atlas_roi_mask = np.logical_and(l_pFus_group_mask, thin_foreground_image[..., subject_index] == 1)
-
-        if atlas_roi_mask.sum() == 0:
+        if atlas_roi_mask.sum() <= 0:
             l_pFus_flag = True
         else:
             markers[atlas_roi_mask] = 2
 
         if l_OFA_flag and l_pFus_flag:
-            #All markers are empty.
-            pass
+            region_result_RW[left_barin_mask > 0] = 5
         elif l_OFA_flag:
             markers[markers == 2] = 1
             markers[thin_background_image[..., subject_index] == 1] = 2
-            # markers[left_barin_mask == False] = -1
-            markers[l_pFus_mask == False] = -1
-            rw_labels = random_walker(image[..., subject_index], markers, beta=10, mode='bf')
+            markers[left_barin_mask == False] = -1
+
+            rw_labels = random_walker(image[..., subject_index], markers, beta=130, mode='bf')
             region_result_RW[rw_labels == 1] = 4
             region_result_RW[rw_labels == 2] = 5
 
             skeletonize_markers_RW[markers == 1] = 4
             skeletonize_markers_RW[markers == 2] = 5
-
         elif l_pFus_flag:
             markers[thin_background_image[..., subject_index] == 1] = 2
-            # markers[right_barin_mask == False] = -1
-            markers[l_OFA_mask == False] = -1
-            rw_labels = random_walker(image[..., subject_index], markers, beta=10, mode='bf')
+            markers[left_barin_mask == False] = -1
+            rw_labels = random_walker(image[..., subject_index], markers, beta=130, mode='bf')
             region_result_RW[rw_labels == 1] = 2
             region_result_RW[rw_labels == 2] = 5
 
@@ -176,7 +154,7 @@ def process_single_subject(subject_index):
             markers[thin_background_image[..., subject_index] == 1] = 3
             markers[left_barin_mask == False] = -1
 
-            rw_labels = random_walker(image[..., subject_index], markers, beta=10, mode='bf')
+            rw_labels = random_walker(image[..., subject_index], markers, beta=130, mode='bf')
             rw_labels[rw_labels == -1] = 0
             region_result_RW[rw_labels == 1] = 2
             region_result_RW[rw_labels == 2] = 4
@@ -185,6 +163,8 @@ def process_single_subject(subject_index):
             skeletonize_markers_RW[markers == 1] = 2
             skeletonize_markers_RW[markers == 2] = 4
             skeletonize_markers_RW[markers == 3] = 5
+
+
 
         result_image[..., atlas_index] = region_result_RW
         result_skeletonize_image[..., atlas_index] = skeletonize_markers_RW
@@ -206,38 +186,31 @@ if __name__ == "__main__":
     mask = img.get_data()
     affine = img.get_affine()
 
-    if not os.path.exists(RW_AGGRAGATOR_RESULT_DATA_DIR):
-        os.makedirs(RW_AGGRAGATOR_RESULT_DATA_DIR)
-
     #Multi rocess begin
     print 'Multi process begin...'
 
     DIR_PREFIX = 'subjects_rw_all_atlas_results/'
-    if not os.path.exists(RW_AGGRAGATOR_RESULT_DATA_DIR + DIR_PREFIX):
-        os.makedirs(RW_AGGRAGATOR_RESULT_DATA_DIR + DIR_PREFIX)
     RW_AGGRAGATOR_RESULT_DATA_DIR = RW_AGGRAGATOR_RESULT_DATA_DIR + DIR_PREFIX
+    if not os.path.exists(RW_AGGRAGATOR_RESULT_DATA_DIR):
+        os.makedirs(RW_AGGRAGATOR_RESULT_DATA_DIR)
 
     # #For single process
-    for subject_index in range(SUBJECTS_SESSION_NUMBERS):
-        process_single_subject(subject_index)
-
-    # process_single_subject(12)
+    # for subject_index in range(SUBJECTS_SESSION_NUMBERS):
+    #     process_single_subject(subject_index)
     # process_single_subject(16)
-    # process_single_subject(37)
-    # process_single_subject(39)
 
     #For multi process
-    # starttime = datetime.datetime.now()
-    # process_num = 7
-    # for cycle_index in range(SUBJECTS_SESSION_NUMBERS / process_num):
-    #     pool = multiprocessing.Pool(processes=process_num)
-    #     pool_outputs = pool.map(process_single_subject, range(cycle_index * process_num,
-    #                                                           (cycle_index + 1) * process_num))
-    #     pool.close()
-    #     pool.join()
-    #
-    #     print 'Cycle index: ', cycle_index, 'Time cost: ', (datetime.datetime.now() - starttime)
-    #     starttime = datetime.datetime.now()
+    starttime = datetime.datetime.now()
+    process_num = 14
+    for cycle_index in range(3, SUBJECTS_SESSION_NUMBERS / process_num):
+        pool = multiprocessing.Pool(processes=process_num)
+        pool_outputs = pool.map(process_single_subject, range(cycle_index * process_num,
+                                                              (cycle_index + 1) * process_num))
+        pool.close()
+        pool.join()
+
+        print 'Cycle index: ', cycle_index, 'Time cost: ', (datetime.datetime.now() - starttime)
+        starttime = datetime.datetime.now()
 
     endtime = datetime.datetime.now()
     print 'Time cost: ', (endtime - starttime)
