@@ -3,7 +3,7 @@ __author__ = 'zhouguangfu'
 import datetime
 import numpy as np
 import nibabel as nib
-from skimage.morphology import skeletonize
+from skimage.morphology import skeletonize, medial_axis
 from configs import *
 
 ALL_202_IMAGES_SKELETONIZE_DIR = ATLAS_TOP_DIR + 'all_202_image_skeletonize.nii.gz'
@@ -23,7 +23,8 @@ if __name__ == "__main__":
 
     for j in range(all_202_image_data.shape[3]):
         for i in range(all_202_image_data.shape[2]):
-            all_202_image_data[..., i, j] = skeletonize(all_202_image_data[..., i, j])
+            # all_202_image_data[..., i, j] = skeletonize(all_202_image_data[..., i, j])
+            all_202_image_data[..., i, j] = medial_axis(all_202_image_data[..., i, j])
             print 'All 202 subjects foreground => j: ', j, '   i: ', i
     nib.save(nib.Nifti1Image(all_202_image_data, affine), ALL_202_IMAGES_SKELETONIZE_DIR)
 
@@ -36,7 +37,8 @@ if __name__ == "__main__":
 
     for j in range(all_subject_sessions_foreground_data.shape[3]):
         for i in range(all_subject_sessions_foreground_data.shape[2]):
-            all_subject_sessions_foreground_data[..., i, j] = skeletonize(all_subject_sessions_foreground_data[..., i, j])
+            # all_subject_sessions_foreground_data[..., i, j] = skeletonize(all_subject_sessions_foreground_data[..., i, j])
+            all_subject_sessions_foreground_data[..., i, j] = medial_axis(all_subject_sessions_foreground_data[..., i, j])
             print 'Foreground => j: ', j, '   i: ', i
 
     all_subject_sessions_background_data[all_subject_sessions_background_data > 0] = 0
@@ -44,7 +46,8 @@ if __name__ == "__main__":
 
     for j in range(all_subject_sessions_background_data.shape[3]):
         for i in range(all_subject_sessions_background_data.shape[2]):
-            all_subject_sessions_background_data[..., i, j] = skeletonize(all_subject_sessions_background_data[..., i, j])
+            # all_subject_sessions_background_data[..., i, j] = skeletonize(all_subject_sessions_background_data[..., i, j])
+            all_subject_sessions_background_data[..., i, j] = medial_axis(all_subject_sessions_background_data[..., i, j])
             print 'Background => j: ', j, '   i: ', i
 
     nib.save(nib.Nifti1Image(all_subject_sessions_foreground_data, affine), ALL_SUBJECT_SESSIONS_SKELETONIZE_FOREGROUND_DIR)

@@ -82,7 +82,7 @@ def process_single_subject(subject_index):
         skeletonize_markers_RW[markers == 2] = 3
         skeletonize_markers_RW[markers == 3] = 5
 
-        rw_labels = random_walker(image[..., subject_index], markers, beta=130, mode='bf')
+        rw_labels = random_walker(image[..., subject_index], markers, beta=130, mode='cg_mg')
         rw_labels[rw_labels == -1] = 0
         region_result_RW[rw_labels == 1] = 1
         region_result_RW[rw_labels == 2] = 3
@@ -125,7 +125,7 @@ def process_single_subject(subject_index):
         skeletonize_markers_RW[markers == 2] = 4
         skeletonize_markers_RW[markers == 3] = 5
 
-        rw_labels = random_walker(image[..., subject_index], markers, beta=130, mode='bf')
+        rw_labels = random_walker(image[..., subject_index], markers, beta=130, mode='cg_mg')
         rw_labels[rw_labels == -1] = 0
         region_result_RW[rw_labels == 1] = 2
         region_result_RW[rw_labels == 2] = 4
@@ -137,10 +137,10 @@ def process_single_subject(subject_index):
         print 'subject_index: ', subject_index, '   atlas_index: ', atlas_index
 
     # #Save the result
-    # nib.save(nib.Nifti1Image(result_skeletonize_image, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
-    #                                                            '_markers_rw.nii.gz')
-    # nib.save(nib.Nifti1Image(result_image, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
-    #                                                           '_regions_rw.nii.gz')
+    nib.save(nib.Nifti1Image(result_skeletonize_image, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
+                                                               '_markers_rw.nii.gz')
+    nib.save(nib.Nifti1Image(result_image, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + str(subject_index) +
+                                                              '_regions_rw.nii.gz')
 
     print 'subject_index:', subject_index, 'atlas-based rw finished...'
 

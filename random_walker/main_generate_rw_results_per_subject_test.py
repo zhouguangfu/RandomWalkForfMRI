@@ -226,18 +226,18 @@ if __name__ == "__main__":
     # process_single_subject(37)
     # process_single_subject(39)
 
-    #For multi process
-    # starttime = datetime.datetime.now()
-    # process_num = 7
-    # for cycle_index in range(SUBJECTS_SESSION_NUMBERS / process_num):
-    #     pool = multiprocessing.Pool(processes=process_num)
-    #     pool_outputs = pool.map(process_single_subject, range(cycle_index * process_num,
-    #                                                           (cycle_index + 1) * process_num))
-    #     pool.close()
-    #     pool.join()
-    #
-    #     print 'Cycle index: ', cycle_index, 'Time cost: ', (datetime.datetime.now() - starttime)
-    #     starttime = datetime.datetime.now()
+    # For multi process
+    starttime = datetime.datetime.now()
+    process_num = 14
+    for cycle_index in range(SUBJECTS_SESSION_NUMBERS / process_num):
+        pool = multiprocessing.Pool(processes=process_num)
+        pool_outputs = pool.map(process_single_subject, range(cycle_index * process_num,
+                                                              (cycle_index + 1) * process_num))
+        pool.close()
+        pool.join()
+
+        print 'Cycle index: ', cycle_index, 'Time cost: ', (datetime.datetime.now() - starttime)
+        starttime = datetime.datetime.now()
 
     endtime = datetime.datetime.now()
     print 'Time cost: ', (endtime - starttime)

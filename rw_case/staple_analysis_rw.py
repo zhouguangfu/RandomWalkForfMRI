@@ -30,6 +30,8 @@ ATLAS_NUM = 10
 SUBJECTS_SESSION_NUMBERS = 70
 LEFT_RIGHT_BRAIN_NAME = ['left_brain', 'right_brain']
 
+# CV_FEAT_ACTIVATION_DATA_DIR = ANALYSIS_DIR + 'gold/' + 'CV_Feat_gold.nii.gz'
+# image = nib.load(CV_FEAT_ACTIVATION_DATA_DIR)
 image = nib.load(ACTIVATION_DATA_DIR)
 affine = image.get_affine()
 image = image.get_data()
@@ -139,7 +141,7 @@ if __name__ == "__main__":
     #     print 'Staple process => subject_index: ', subject_index
 
     #For multi process
-    for i in range(6):
+    for i in range(5, 6):
         ATLAS_NUM = (i + 1) * 10
         print '------------------------------- ', ATLAS_NUM, ' ------------------------------------'
 

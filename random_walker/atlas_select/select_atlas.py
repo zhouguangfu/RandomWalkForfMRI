@@ -7,6 +7,8 @@ import csv
 import multiprocessing
 import os
 
+from scipy.stats import pearsonr
+
 from configs import *
 from nipype.interfaces.nipy.utils import Similarity
 
@@ -17,7 +19,7 @@ ATLAS_NUM = 202
 #global varibale
 all_202_label_data = nib.load(ATLAS_SUBJECTS_LABELS_DIR).get_data()
 all_202_image_data = nib.load(ALL_202_SUBJECTS_DATA_DIR).get_data()
-all_202_image_data[all_202_image_data < 0] = 0
+all_202_image_data[all_202_image_data < 1.6] = 0
 
 
 image = nib.load(ACTIVATION_DATA_DIR)
@@ -33,7 +35,7 @@ left_right_brain_mask_list = [left_brain_mask, right_brain_mask]
 LEFT_RIGHT_BRAIN_NAME = ['left_brain', 'right_brain']
 
 
-def compute_similarity(volume1_filepath, volume2_filepath, mask_file_path, metric='nmi'):
+def compute_similarity(volume1_filepath, volume2_filepath, mask_file_path, metric='mi'):
     similarity = Similarity()
     similarity.inputs.volume1 = volume1_filepath
     similarity.inputs.volume2 = volume2_filepath
@@ -91,6 +93,49 @@ def generate_atlas_top_index_half_brain(subject_index):
     os.remove(volume1_filepath)
 
 
+def generate_atlas_top_index_whole_brain(subject_index):
+    volume1 = image[..., subject_index]
+    volume1[volume1 < 0] = 0
+
+    writer_left = csv.writer(file(ATLAS_TOP_DIR + LEFT_RIGHT_BRAIN_NAME[0] + '_' +
+                                 str(subject_index) + '_top_sort.csv', 'wb'))
+    writer_right = csv.writer(file(ATLAS_TOP_DIR + LEFT_RIGHT_BRAIN_NAME[1] + '_' +
+                                 str(subject_index) + '_top_sort.csv', 'wb'))
+
+    writer_left.writerow(['index', 'similarity'])
+    writer_right.writerow(['index', 'similarity'])
+
+    mask = np.logical_or(left_right_brain_mask_list[0], left_right_brain_mask_list[1])
+    mask[mask] = 1
+
+    simility_vals = np.zeros((ATLAS_NUM))
+    for j in range(ATLAS_NUM):
+        volume2 = all_202_image_data[..., j]
+        volume2[volume2 < 0] = 0
+
+        simility_vals[j] = pearsonr(volume1[mask].reshape(-1, ), volume2[mask].reshape(-1, ))[0]
+
+    print '------------------------------ i: ', subject_index, ' -----------------------------'
+
+    index = np.argsort(-simility_vals)
+    np.save(ATLAS_TOP_DIR + LEFT_RIGHT_BRAIN_NAME[0] + '_' + str(subject_index) + '_top_sort.npy', index)
+    np.save(ATLAS_TOP_DIR + LEFT_RIGHT_BRAIN_NAME[1] + '_' + str(subject_index) + '_top_sort.npy', index)
+
+    left_right_brain_label_data = np.zeros((left_brain_mask.shape[0],
+                                                left_brain_mask.shape[1],
+                                                left_brain_mask.shape[2],
+                                                TOP_RANK))
+    for top_index in range(TOP_RANK):
+        left_right_brain_label_data[..., top_index] = all_202_label_data[..., index[top_index]]
+
+    nib.save(nib.Nifti1Image(left_right_brain_label_data, affine), ATLAS_TOP_DIR +
+                'whole_brain' + '_' + str(subject_index) + '_top_rank_' + str(TOP_RANK) + '.nii.gz')
+
+    for k in range(index.shape[0]):
+        writer_left.writerow([index[k], round(simility_vals[index[k]], 4)])
+        writer_right.writerow([index[k], round(simility_vals[index[k]], 4)])
+
+
 if __name__ == "__main__":
     starttime = datetime.datetime.now()
     # generate_atlas_top_index_per_roi(all_202_image_data)
@@ -99,12 +144,12 @@ if __name__ == "__main__":
     #     generate_atlas_top_index_half_brain(i)
 
     # for i in range(70):
-    #     generate_atlas_top_index_half_brain(i)
+    #     generate_atlas_top_index_whole_brain(i)
 
-    process_num = 14
+    process_num = 35
     for cycle_index in range(image.shape[3] / process_num):
         pool = multiprocessing.Pool(processes=process_num)
-        pool_outputs = pool.map(generate_atlas_top_index_half_brain, range(cycle_index * process_num,
+        pool_outputs = pool.map(generate_atlas_top_index_whole_brain, range(cycle_index * process_num,
                                                               (cycle_index + 1) * process_num))
         pool.close()
         pool.join()

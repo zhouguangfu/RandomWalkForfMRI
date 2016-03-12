@@ -108,7 +108,7 @@ if __name__ == "__main__":
 
     stats_means = []
 
-    for i in range(15):
+    for i in range(19, 20):
         filepath = RW_AGGRAGATOR_RESULT_DATA_DIR + 'staple/rw/top_rank_' + str((i + 1) * 10) + '_' + RW_PROB_RESULT_FILE
         # filepath_random = RW_AGGRAGATOR_RESULT_DATA_DIR + 'staple/rw/random_' + str(( i + 1) * 10) + '_' + RW_PROB_RESULT_FILE
         # filepath = filepath_random

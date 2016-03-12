@@ -83,10 +83,16 @@ def manual(roi_index):
     return dices
 
 def gss(roi_index):
-    ROI = ['r_OFA', 'l_OFA', 'r_pFus', 'l_pFus']
-    all_subject_session_path = ANALYSIS_DIR + 'gss/' + ROI[roi_index] + '_gss.nii.gz'
+    # ROI = ['r_OFA', 'l_OFA', 'r_pFus', 'l_pFus']
+    # all_subject_session_path = ANALYSIS_DIR + 'gss/' + ROI[roi_index] + '_gss.nii.gz'
+    # all_subject_session = nib.load(all_subject_session_path).get_data()
+    # dices = compute_dice_matrix(all_subject_session)
+
+    all_subject_session_path = ANALYSIS_DIR + 'gss/' + 'GSS_thr_0.1_zgf.nii.gz'
     all_subject_session = nib.load(all_subject_session_path).get_data()
+    all_subject_session[all_subject_session != (roi_index + 1)] = 0
     dices = compute_dice_matrix(all_subject_session)
+
     return dices
 
 # def ac_srg(roi_index):

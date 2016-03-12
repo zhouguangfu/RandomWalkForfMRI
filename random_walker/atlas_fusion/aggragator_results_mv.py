@@ -7,11 +7,13 @@ import datetime
 import os
 import multiprocessing
 
-image = nib.load(ACTIVATION_DATA_DIR)
+CV_FEAT_ACTIVATION_DATA_DIR = ANALYSIS_DIR + 'gold/' + 'CV_Feat_gold.nii.gz'
+image = nib.load(CV_FEAT_ACTIVATION_DATA_DIR)
+# image = nib.load(ACTIVATION_DATA_DIR)
 affine = image.get_affine()
 image = image.get_data()
 
-ATLAS_NUM = 10
+ATLAS_NUM = 202
 SESSION_NUMBERS = 7
 SUBJECTS_SESSION_NUMBERS = 70
 
@@ -113,8 +115,9 @@ if __name__ == "__main__":
     # for subject_index in range(image.shape[3]):
     #     atlas_based_aggragator(subject_index)
 
+
     #For multi process
-    for i in range(8):
+    for i in range(19, 20):
         ATLAS_NUM = (i + 1) * 10
         print '------------------------------- ', ATLAS_NUM, ' ------------------------------------'
 

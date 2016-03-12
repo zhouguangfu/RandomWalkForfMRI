@@ -116,6 +116,8 @@ if __name__ == "__main__":
     # for subject_index in range(image.shape[3]):
     #     atlas_based_aggragator(subject_index)
 
+    # atlas_based_aggragator(0)
+
     process_num = 14
     for cycle_index in range(image.shape[3] / process_num):
         pool = multiprocessing.Pool(processes=process_num)

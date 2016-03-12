@@ -52,8 +52,8 @@ def generate_single_subject_nii_volume(subject_index):
     #     nib.save(nib.Nifti1Image(all_subject_session_rw[..., atlas_index], affine), rw_path + str(atlas_index) + '_session.nii')
     #     all_file_path += ' ' + rw_path + str(atlas_index) + '_session.nii'
     np.random.seed()
-    indexs_right = np.random.choice(range(150), ATLAS_NUM, replace=False)
-    indexs_left = np.random.choice(range(150), ATLAS_NUM, replace=False)
+    indexs_right = np.random.choice(range(202), ATLAS_NUM, replace=False)
+    indexs_left = np.random.choice(range(202), ATLAS_NUM, replace=False)
 
     # print '-------------------------- ', subject_index, ' -------------------------------'
     # print 'indexs_right: ', indexs_right
@@ -141,7 +141,7 @@ if __name__ == "__main__":
     #     print 'Staple process => subject_index: ', subject_index
 
     #For multi process
-    for i in range(15):
+    for i in range(10):
         ATLAS_NUM = (i + 1) * 10
         print '------------------------------- ', ATLAS_NUM, ' ------------------------------------'
 
