@@ -1,14 +1,10 @@
 __author__ = 'zgf'
 
 import datetime
-
 import nibabel as nib
 import numpy as np
-from docx import Document
-from docx.shared import Inches
 
 from configs import *
-# from matplot_case.inter_subject_bar import show_barchart
 
 SUBJECT_SESSION_NUM = 7
 
@@ -33,19 +29,6 @@ def all_analysis(all_dices):
         means.append(temp_means)
         stds.append(temp_stds)
 
-    document = Document()
-    title = 'Atlas-based Random Walk Methods Analysis '
-    document.add_heading('ALL_Subject_Methods Analysis ', 0)
-
-    xlabel = 'ROI'
-    ylabel = 'Dice'
-    # show_barchart(means, stds, xlabel, ylabel, title, COLOR, METHODS, ROI)
-
-    # document.add_picture(TEMP_IMG_DIR, width=Inches(6.0))
-    document.add_paragraph('Mean of Optional Region Size:  ' + str(means), style='ListBullet')
-    document.add_paragraph('Std of Optional Region Size:  ' + str(stds), style='ListBullet')
-    document.save(ANALYSIS_DIR + 'All_Methods_' + RW_ATLAS_BASED_DOCX_RESULT_FILE)
-
     print 'all_analysis: ', '  means: ', means
     return means
 
@@ -58,35 +41,16 @@ def inter_subject_analysis(roi_dices, roi_index):
         means.append(np.average(dices[..., i], axis=0).tolist())
         stds.append(np.std(dices[..., i], axis=0).tolist())
 
-    document = Document()
-    title = ROI[roi_index] + '_Methods Analysis '
-    document.add_heading(ROI[roi_index] + '_Methods Analysis ', 0)
-
-    xlabel = 'Subject Name'
-    ylabel = 'Dice'
-    # show_barchart(means, stds, xlabel, ylabel, title, COLOR, METHODS, SUBJECT_NAMES)
-
-    # document.add_picture(TEMP_IMG_DIR, width=Inches(6.0))
-    document.add_paragraph('Mean of Optional Region Size:  ' + str(means), style='ListBullet')
-    document.add_paragraph('Std of Optional Region Size:  ' + str(stds), style='ListBullet')
-    document.save(ANALYSIS_DIR + ROI[roi_index]+ '_Methods_' + RW_ATLAS_BASED_DOCX_RESULT_FILE)
     print 'inter_subject_analysis: ', ' roi_index: ', ROI[roi_index]
     print 'means: ', means
 
     return means
 
 def random_walker(roi_index, rw_result_filepath):
-    # all_subject_session_path = ANALYSIS_DIR + 'rsrg/' + ROI[roi_index] + '_' + '1000_rsrg.nii.gz'
-    # all_subject_session_path = ANALYSIS_DIR + 'rw/' + str(roi_index + 1) + '_rw_result_file.nii.gz'
-
-    # all_subject_session_path = ANALYSIS_DIR + 'rw/' + ROI[roi_index] + '_' + RW_PROB_RESULT_FILE
-    # all_subject_session = nib.load(all_subject_session_path).get_data()
-
     all_subject_session = (nib.load(rw_result_filepath).get_data() == (roi_index + 1)).astype(np.int32)
 
     dices = compute_dice_matrix(all_subject_session)
     return dices
-
 
 def compute_dice_matrix(all_subject_session):
     session_length = all_subject_session.shape[3]
@@ -107,10 +71,9 @@ if __name__ == "__main__":
     starttime = datetime.datetime.now()
 
     stats_means = []
-
-    for i in range(19, 20):
-        filepath = RW_AGGRAGATOR_RESULT_DATA_DIR + 'staple/rw/top_rank_' + str((i + 1) * 10) + '_' + RW_PROB_RESULT_FILE
-        # filepath_random = RW_AGGRAGATOR_RESULT_DATA_DIR + 'staple/rw/random_' + str(( i + 1) * 10) + '_' + RW_PROB_RESULT_FILE
+    for i in range(20):
+        filepath = RW_AGGRAGATOR_RESULT_DATA_DIR + 'rw/top_rank/top_rank_' + str((i + 1) * 10) + '_' + RW_PROB_RESULT_FILE
+        # filepath_random = RW_AGGRAGATOR_RESULT_DATA_DIR + 'rw/random/top_rank_' + str(( i + 1) * 10) + '_' + RW_PROB_RESULT_FILE
         # filepath = filepath_random
         print 'filepath: ', filepath
 

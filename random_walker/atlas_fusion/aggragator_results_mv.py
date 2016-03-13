@@ -7,9 +7,7 @@ import datetime
 import os
 import multiprocessing
 
-CV_FEAT_ACTIVATION_DATA_DIR = ANALYSIS_DIR + 'gold/' + 'CV_Feat_gold.nii.gz'
-image = nib.load(CV_FEAT_ACTIVATION_DATA_DIR)
-# image = nib.load(ACTIVATION_DATA_DIR)
+image = nib.load(ACTIVATION_DATA_DIR)
 affine = image.get_affine()
 image = image.get_data()
 
@@ -18,6 +16,8 @@ SESSION_NUMBERS = 7
 SUBJECTS_SESSION_NUMBERS = 70
 
 LEFT_RIGHT_BRAIN_NAME = ['left_brain', 'right_brain']
+left_barin_mask = nib.load(PROB_ROI_202_SUB_FILE + PROB_LEFT_BRAIN_FILE).get_data()
+right_barin_mask = nib.load(PROB_ROI_202_SUB_FILE + PROB_RIGHT_BRAIN_FILE).get_data()
 
 #Aggragator the result
 def atlas_based_aggragator(subject_index):
@@ -29,15 +29,21 @@ def atlas_based_aggragator(subject_index):
     left_brain_indexs = np.load(ATLAS_TOP_DIR + LEFT_RIGHT_BRAIN_NAME[0] + '_' + str(subject_index) + '_top_sort.npy')
     right_brain_indexs = np.load(ATLAS_TOP_DIR + LEFT_RIGHT_BRAIN_NAME[1] + '_' + str(subject_index) + '_top_sort.npy')
 
+    # left_brain_indexs = np.load(RW_RESULT_DATA_DIR + 'atlas_top_pearsonr/' + LEFT_RIGHT_BRAIN_NAME[0] + '_' + str(subject_index) + '_top_sort.npy')
+    # right_brain_indexs = np.load(RW_RESULT_DATA_DIR + 'atlas_top_pearsonr/' + LEFT_RIGHT_BRAIN_NAME[1] + '_' + str(subject_index) + '_top_sort.npy')
+
+
     #Top atlas
     for atlas_index in range(ATLAS_NUM):
+        region_result_RW[np.logical_and(right_barin_mask, single_subject_rw_regions[..., right_brain_indexs[atlas_index]] == 5)
+                         , atlas_index] = 5
+        region_result_RW[np.logical_and(left_barin_mask, single_subject_rw_regions[..., left_brain_indexs[atlas_index]] == 5)
+                         , atlas_index] = 5
+
         region_result_RW[single_subject_rw_regions[..., right_brain_indexs[atlas_index]] == 1, atlas_index] = 1
         region_result_RW[single_subject_rw_regions[..., left_brain_indexs[atlas_index]] == 2, atlas_index] = 2
         region_result_RW[single_subject_rw_regions[..., right_brain_indexs[atlas_index]] == 3, atlas_index] = 3
         region_result_RW[single_subject_rw_regions[..., left_brain_indexs[atlas_index]] == 4, atlas_index] = 4
-
-        region_result_RW[single_subject_rw_regions[..., right_brain_indexs[atlas_index]] == 5, atlas_index] = 5
-        region_result_RW[single_subject_rw_regions[..., left_brain_indexs[atlas_index]] == 5, atlas_index] = 5
 
     weight = np.ones(ATLAS_NUM, dtype=float)
     weight = weight * 1. / ATLAS_NUM
@@ -101,7 +107,7 @@ def generate_rw_prob_result(rw_atlas_based_aggrator_result):
         print 'subject_index: ', subject_index
     temp_image[temp_image == 5] = 0
     # nib.save(nib.Nifti1Image(temp_image, affine), RW_AGGRAGATOR_RESULT_DATA_DIR + 'rw/mv_' + RW_PROB_RESULT_FILE)
-    nib.save(nib.Nifti1Image(temp_image, affine),   RW_AGGRAGATOR_RESULT_DATA_DIR + 'staple/rw/top_rank_' + str(ATLAS_NUM)
+    nib.save(nib.Nifti1Image(temp_image, affine),   RW_AGGRAGATOR_RESULT_DATA_DIR + 'rw/top_rank_' + str(ATLAS_NUM)
              + '_' + RW_PROB_RESULT_FILE)
 
 
@@ -118,7 +124,8 @@ if __name__ == "__main__":
 
     #For multi process
     for i in range(19, 20):
-        ATLAS_NUM = (i + 1) * 10
+        # ATLAS_NUM = (i + 1) * 10
+        ATLAS_NUM = 202
         print '------------------------------- ', ATLAS_NUM, ' ------------------------------------'
 
         starttime = datetime.datetime.now()
